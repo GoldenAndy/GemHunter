@@ -22,6 +22,12 @@ public class PlayerMovementTest : MonoBehaviour
     [SerializeField] private KeyCode attackKey = KeyCode.Z;
     [SerializeField] private float minimumAttackTime = 0.15f;
 
+    [Header("Hitbox de espada")]
+    [SerializeField] private Transform hitboxPivot;
+    [SerializeField] private Collider2D espadaHitboxCollider;
+    [SerializeField] private EspadaHitbox espadaHitbox;
+    [SerializeField] private float hitboxMaxActiveTime = 0.25f;
+
     [Header("Gravedad")]
     [SerializeField] private float normalGravity = 3f;
     [SerializeField] private float fallGravityMultiplier = 1.8f;
@@ -39,6 +45,7 @@ public class PlayerMovementTest : MonoBehaviour
     private float horizontalInput;
     private bool isRunning;
     private bool isGrounded;
+    private bool mirandoDerecha = true;
 
     private bool canInterruptAttack = true;
     private float attackInterruptCounter;
@@ -46,6 +53,9 @@ public class PlayerMovementTest : MonoBehaviour
     private float coyoteTimeCounter;
     private float jumpBufferCounter;
     private float groundIgnoreCounter;
+
+    private float hitboxActiveCounter;
+    private bool isSwordHitboxActive;
 
     private void Awake()
     {
@@ -55,6 +65,9 @@ public class PlayerMovementTest : MonoBehaviour
 
         rb.gravityScale = normalGravity;
         rb.freezeRotation = true;
+
+        DesactivarEspadaHitbox();
+        ActualizarDireccionHitbox();
     }
 
     private void Update()
@@ -63,6 +76,7 @@ public class PlayerMovementTest : MonoBehaviour
         DetectarSuelo();
         ControlarSalto();
         ControlarAtaque();
+        ActualizarTiempoHitbox();
         GirarPersonaje();
         ActualizarAnimator();
     }
@@ -120,14 +134,12 @@ public class PlayerMovementTest : MonoBehaviour
         {
             if (hit == null) continue;
 
-            // Evita que el GroundCheck detecte el propio collider del Player.
             if (hit.transform.IsChildOf(transform)) continue;
 
             touchingGround = true;
             break;
         }
 
-        // Si el jugador está subiendo, no debe contar como grounded.
         isGrounded = touchingGround && rb.velocity.y <= 0.05f;
 
         if (isGrounded)
@@ -183,6 +195,18 @@ public class PlayerMovementTest : MonoBehaviour
         }
     }
 
+    private void ActualizarTiempoHitbox()
+    {
+        if (!isSwordHitboxActive) return;
+
+        hitboxActiveCounter -= Time.deltaTime;
+
+        if (hitboxActiveCounter <= 0f)
+        {
+            DesactivarEspadaHitbox();
+        }
+    }
+
     private void MoverPersonaje()
     {
         float currentSpeed = isRunning ? runSpeed : walkSpeed;
@@ -228,12 +252,25 @@ public class PlayerMovementTest : MonoBehaviour
     {
         if (horizontalInput > 0.01f)
         {
+            mirandoDerecha = true;
             spriteRenderer.flipX = false;
         }
         else if (horizontalInput < -0.01f)
         {
+            mirandoDerecha = false;
             spriteRenderer.flipX = true;
         }
+
+        ActualizarDireccionHitbox();
+    }
+
+    private void ActualizarDireccionHitbox()
+    {
+        if (hitboxPivot == null) return;
+
+        hitboxPivot.localScale = mirandoDerecha
+            ? new Vector3(1f, 1f, 1f)
+            : new Vector3(-1f, 1f, 1f);
     }
 
     private void ActualizarAnimator()
@@ -243,6 +280,33 @@ public class PlayerMovementTest : MonoBehaviour
         animator.SetBool("IsGrounded", isGrounded);
         animator.SetFloat("VerticalSpeed", rb.velocity.y);
         animator.SetBool("CanInterruptAttack", canInterruptAttack);
+    }
+
+    public void ActivarEspadaHitbox()
+    {
+        if (espadaHitbox != null)
+        {
+            espadaHitbox.ReiniciarGolpes();
+        }
+
+        if (espadaHitboxCollider != null)
+        {
+            espadaHitboxCollider.enabled = true;
+        }
+
+        isSwordHitboxActive = true;
+        hitboxActiveCounter = hitboxMaxActiveTime;
+    }
+
+    public void DesactivarEspadaHitbox()
+    {
+        if (espadaHitboxCollider != null)
+        {
+            espadaHitboxCollider.enabled = false;
+        }
+
+        isSwordHitboxActive = false;
+        hitboxActiveCounter = 0f;
     }
 
     private void OnDrawGizmosSelected()
