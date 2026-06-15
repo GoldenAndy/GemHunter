@@ -18,6 +18,10 @@ public class PlayerMovementTest : MonoBehaviour
     [SerializeField] private float jumpBufferTime = 0.12f;
     [SerializeField] private float groundIgnoreAfterJumpTime = 0.15f;
 
+    [Header("Ataque")]
+    [SerializeField] private KeyCode attackKey = KeyCode.Z;
+    [SerializeField] private float minimumAttackTime = 0.15f;
+
     [Header("Gravedad")]
     [SerializeField] private float normalGravity = 3f;
     [SerializeField] private float fallGravityMultiplier = 1.8f;
@@ -35,6 +39,9 @@ public class PlayerMovementTest : MonoBehaviour
     private float horizontalInput;
     private bool isRunning;
     private bool isGrounded;
+
+    private bool canInterruptAttack = true;
+    private float attackInterruptCounter;
 
     private float coyoteTimeCounter;
     private float jumpBufferCounter;
@@ -55,6 +62,7 @@ public class PlayerMovementTest : MonoBehaviour
         LeerInput();
         DetectarSuelo();
         ControlarSalto();
+        ControlarAtaque();
         GirarPersonaje();
         ActualizarAnimator();
     }
@@ -154,6 +162,27 @@ public class PlayerMovementTest : MonoBehaviour
         }
     }
 
+    private void ControlarAtaque()
+    {
+        if (Input.GetKeyDown(attackKey))
+        {
+            animator.SetTrigger("Attack");
+
+            canInterruptAttack = false;
+            attackInterruptCounter = minimumAttackTime;
+        }
+
+        if (!canInterruptAttack)
+        {
+            attackInterruptCounter -= Time.deltaTime;
+
+            if (attackInterruptCounter <= 0f)
+            {
+                canInterruptAttack = true;
+            }
+        }
+    }
+
     private void MoverPersonaje()
     {
         float currentSpeed = isRunning ? runSpeed : walkSpeed;
@@ -213,6 +242,7 @@ public class PlayerMovementTest : MonoBehaviour
         animator.SetBool("IsRunning", isRunning);
         animator.SetBool("IsGrounded", isGrounded);
         animator.SetFloat("VerticalSpeed", rb.velocity.y);
+        animator.SetBool("CanInterruptAttack", canInterruptAttack);
     }
 
     private void OnDrawGizmosSelected()
