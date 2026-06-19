@@ -496,7 +496,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a015e219a5ffb14d9036b46a90d49a6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  vidaMaxima: 3
+  vidaMaxima: 4
   destruirAlMorir: 1
 --- !u!50 &2056908327
 Rigidbody2D:

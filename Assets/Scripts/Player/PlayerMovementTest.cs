@@ -28,6 +28,9 @@ public class PlayerMovementTest : MonoBehaviour
     [SerializeField] private EspadaHitbox espadaHitbox;
     [SerializeField] private float hitboxMaxActiveTime = 0.25f;
 
+    [Header("Collider del jugador")]
+    [SerializeField] private Collider2D cuerpoCollider;
+
     [Header("Gravedad")]
     [SerializeField] private float normalGravity = 3f;
     [SerializeField] private float fallGravityMultiplier = 1.8f;
@@ -41,6 +44,8 @@ public class PlayerMovementTest : MonoBehaviour
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
     private Animator animator;
+
+    private Vector2 cuerpoColliderOffsetOriginal;
 
     private float horizontalInput;
     private bool isRunning;
@@ -62,6 +67,16 @@ public class PlayerMovementTest : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
         animator = GetComponent<Animator>();
+
+        if (cuerpoCollider == null)
+        {
+            cuerpoCollider = GetComponent<Collider2D>();
+        }
+
+        if (cuerpoCollider != null)
+        {
+            cuerpoColliderOffsetOriginal = cuerpoCollider.offset;
+        }
 
         rb.gravityScale = normalGravity;
         rb.freezeRotation = true;
@@ -266,11 +281,19 @@ public class PlayerMovementTest : MonoBehaviour
 
     private void ActualizarDireccionHitbox()
     {
-        if (hitboxPivot == null) return;
+        if (hitboxPivot != null)
+        {
+            hitboxPivot.localScale = mirandoDerecha
+                ? new Vector3(1f, 1f, 1f)
+                : new Vector3(-1f, 1f, 1f);
+        }
 
-        hitboxPivot.localScale = mirandoDerecha
-            ? new Vector3(1f, 1f, 1f)
-            : new Vector3(-1f, 1f, 1f);
+        if (cuerpoCollider != null)
+        {
+            cuerpoCollider.offset = mirandoDerecha
+                ? cuerpoColliderOffsetOriginal
+                : new Vector2(-cuerpoColliderOffsetOriginal.x, cuerpoColliderOffsetOriginal.y);
+        }
     }
 
     private void ActualizarAnimator()
