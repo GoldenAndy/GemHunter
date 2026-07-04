@@ -137,23 +137,18 @@ public class PlayerMovementTest : MonoBehaviour
             return;
         }
 
-        bool touchingGround = false;
-
-        Collider2D[] hits = Physics2D.OverlapCircleAll(
+        RaycastHit2D hit = Physics2D.BoxCast(
             groundCheck.position,
+            new Vector2(0.25f, 0.05f),
+            0f,
+            Vector2.down,
             groundCheckRadius,
             groundLayer
         );
 
-        foreach (Collider2D hit in hits)
-        {
-            if (hit == null) continue;
-
-            if (hit.transform.IsChildOf(transform)) continue;
-
-            touchingGround = true;
-            break;
-        }
+        bool touchingGround =
+            hit.collider != null &&
+            !hit.transform.IsChildOf(transform);
 
         isGrounded = touchingGround && rb.velocity.y <= 0.05f;
 
@@ -336,6 +331,8 @@ public class PlayerMovementTest : MonoBehaviour
     {
         if (groundCheck == null) return;
 
-        Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
+        Gizmos.DrawWireCube(
+            groundCheck.position + Vector3.down * groundCheckRadius / 2f,
+            new Vector3(0.25f, groundCheckRadius, 0f));
     }
 }
