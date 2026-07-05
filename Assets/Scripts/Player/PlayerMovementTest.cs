@@ -61,6 +61,8 @@ public class PlayerMovementTest : MonoBehaviour
 
     private float hitboxActiveCounter;
     private bool isSwordHitboxActive;
+    private float bloqueoMovimientoPorDano;
+    private bool recibiendoDano;
 
     private void Awake()
     {
@@ -87,19 +89,122 @@ public class PlayerMovementTest : MonoBehaviour
 
     private void Update()
     {
-        LeerInput();
+        ActualizarBloqueoPorDano();
+
+        if (!recibiendoDano)
+        {
+            LeerInput();
+            ControlarSalto();
+            ControlarAtaque();
+            GirarPersonaje();
+        }
+        else
+        {
+            horizontalInput = 0f;
+            isRunning = false;
+        }
+
         DetectarSuelo();
-        ControlarSalto();
-        ControlarAtaque();
         ActualizarTiempoHitbox();
-        GirarPersonaje();
         ActualizarAnimator();
     }
 
     private void FixedUpdate()
     {
-        MoverPersonaje();
+        if (!recibiendoDano)
+        {
+            MoverPersonaje();
+        }
+
         AplicarGravedadMejorada();
+    }
+
+    private void ActualizarBloqueoPorDano()
+    {
+        if (!recibiendoDano)
+            return;
+
+        bloqueoMovimientoPorDano -= Time.deltaTime;
+
+        bool estaEnHurt =
+            animator.GetCurrentAnimatorStateInfo(0).IsName("Player_Hurt");
+
+        bool estaEntrandoEnHurt =
+            animator.IsInTransition(0) &&
+            animator.GetNextAnimatorStateInfo(0).IsName("Player_Hurt");
+
+        /*
+        * El control vuelve únicamente cuando:
+        * 1. Terminó el tiempo mínimo de bloqueo.
+        * 2. El Animator ya salió de Player_Hurt.
+        */
+        if (bloqueoMovimientoPorDano <= 0f &&
+            !estaEnHurt &&
+            !estaEntrandoEnHurt)
+        {
+            bloqueoMovimientoPorDano = 0f;
+            recibiendoDano = false;
+
+            canInterruptAttack = true;
+            animator.SetBool("CanInterruptAttack", true);
+        }
+    }
+
+
+    public void RecibirImpacto(
+        Vector2 direccion,
+        float fuerzaEmpuje,
+        float duracionBloqueo)
+    {
+        recibiendoDano = true;
+        bloqueoMovimientoPorDano = duracionBloqueo;
+
+        horizontalInput = 0f;
+        isRunning = false;
+
+        /*
+        * Durante la animación de daño bloqueamos las transiciones
+        * de Any State hacia Jump y Fall.
+        */
+        canInterruptAttack = false;
+        attackInterruptCounter = 0f;
+
+        // Cancela cualquier ataque pendiente.
+        animator.ResetTrigger("Attack");
+
+        // Actualizamos el parámetro inmediatamente.
+        animator.SetBool("CanInterruptAttack", false);
+
+        // La espada deja de hacer daño al recibir el golpe.
+        DesactivarEspadaHitbox();
+
+        float direccionHorizontal = direccion.x;
+
+        if (Mathf.Abs(direccionHorizontal) < 0.01f)
+        {
+            direccionHorizontal = mirandoDerecha ? -1f : 1f;
+        }
+        else
+        {
+            direccionHorizontal = Mathf.Sign(direccionHorizontal);
+        }
+
+        float fuerzaVertical = fuerzaEmpuje * 0.45f;
+
+        // Aplica el retroceso.
+        rb.velocity = new Vector2(
+            direccionHorizontal * fuerzaEmpuje,
+            fuerzaVertical
+        );
+
+        // Activa finalmente la animación de daño.
+        animator.SetTrigger("Hurt");
+
+        Debug.Log(
+            $"Hurt activado en {gameObject.name}. " +
+            $"Velocidad: {rb.velocity}. " +
+            $"Animator: {animator.runtimeAnimatorController.name}"
+        );
     }
 
     private void LeerInput()
@@ -335,4 +440,5 @@ public class PlayerMovementTest : MonoBehaviour
             groundCheck.position + Vector3.down * groundCheckRadius / 2f,
             new Vector3(0.25f, groundCheckRadius, 0f));
     }
+    
 }
