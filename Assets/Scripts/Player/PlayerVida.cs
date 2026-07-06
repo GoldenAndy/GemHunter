@@ -69,6 +69,12 @@ public class PlayerVida : MonoBehaviour, IDamageable
             $"Vida actual: {playerStats.Health}/{playerStats.MaxHealth}"
         );
 
+        if (playerStats.Health <= 0f)
+        {
+            Morir();
+            return;
+        }
+
         if (movimiento != null)
         {
             movimiento.RecibirImpacto(
@@ -76,12 +82,6 @@ public class PlayerVida : MonoBehaviour, IDamageable
                 damageInfo.fuerzaEmpuje,
                 duracionBloqueoMovimiento
             );
-        }
-
-        if (playerStats.Health <= 0f)
-        {
-            Morir();
-            return;
         }
 
         if (coroutineInvulnerabilidad != null)
@@ -116,18 +116,26 @@ public class PlayerVida : MonoBehaviour, IDamageable
 
     private void Morir()
     {
+        if (estaMuerto)
+            return;
+
         estaMuerto = true;
         esInvulnerable = true;
 
+        if (coroutineInvulnerabilidad != null)
+        {
+            StopCoroutine(coroutineInvulnerabilidad);
+            coroutineInvulnerabilidad = null;
+        }
+
         spriteRenderer.enabled = true;
 
-        Debug.Log("El jugador se quedó sin vida.");
+        if (movimiento != null)
+        {
+            movimiento.ReproducirMuerte();
+        }
 
-        // Posteriormente:
-        // - Animación de muerte.
-        // - Pantalla de derrota.
-        // - Reinicio del nivel.
-        // - Desactivación de controles.
+        Debug.Log("El jugador se quedó sin vida.");
     }
 
     private void OnDisable()

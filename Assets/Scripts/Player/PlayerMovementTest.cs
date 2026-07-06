@@ -63,6 +63,7 @@ public class PlayerMovementTest : MonoBehaviour
     private bool isSwordHitboxActive;
     private float bloqueoMovimientoPorDano;
     private bool recibiendoDano;
+    private bool estaMuerto;
 
     private void Awake()
     {
@@ -89,6 +90,9 @@ public class PlayerMovementTest : MonoBehaviour
 
     private void Update()
     {
+        if (estaMuerto)
+            return;
+
         ActualizarBloqueoPorDano();
 
         if (!recibiendoDano)
@@ -111,6 +115,9 @@ public class PlayerMovementTest : MonoBehaviour
 
     private void FixedUpdate()
     {
+        if (estaMuerto)
+            return;
+
         if (!recibiendoDano)
         {
             MoverPersonaje();
@@ -206,6 +213,41 @@ public class PlayerMovementTest : MonoBehaviour
             $"Animator: {animator.runtimeAnimatorController.name}"
         );
     }
+
+
+    public void ReproducirMuerte()
+    {
+        if (estaMuerto)
+            return;
+
+        estaMuerto = true;
+        recibiendoDano = false;
+
+        horizontalInput = 0f;
+        isRunning = false;
+
+        canInterruptAttack = false;
+        attackInterruptCounter = 0f;
+
+        // La espada deja de estar activa al morir.
+        DesactivarEspadaHitbox();
+
+        // Cancelamos animaciones pendientes.
+        animator.ResetTrigger("Attack");
+        animator.ResetTrigger("Hurt");
+
+        // Bloqueamos transiciones normales desde Any State.
+        animator.SetBool("CanInterruptAttack", false);
+
+        // Detenemos el movimiento horizontal.
+        rb.velocity = new Vector2(0f, rb.velocity.y);
+
+    // Activamos la animación final.
+    animator.SetTrigger("Death");
+
+    Debug.Log("Animación de muerte activada.");
+}
+
 
     private void LeerInput()
     {
@@ -407,6 +449,9 @@ public class PlayerMovementTest : MonoBehaviour
 
     public void ActivarEspadaHitbox()
     {
+        if (estaMuerto)
+            return;
+
         if (espadaHitbox != null)
         {
             espadaHitbox.ReiniciarGolpes();
