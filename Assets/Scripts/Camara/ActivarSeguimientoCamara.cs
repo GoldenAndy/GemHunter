@@ -14,6 +14,9 @@ public class ActivarSeguimientoCamara : MonoBehaviour
     [Header("Seguimiento horizontal")]
     [SerializeField] private float suavizadoHorizontal = 0.15f;
 
+    [Header("Posición del jugador en pantalla")]
+    [SerializeField] private float offsetVertical = 2f;
+
     private bool seguimientoActivado;
 
     private float posicionYFija;
@@ -93,7 +96,7 @@ public class ActivarSeguimientoCamara : MonoBehaviour
 
         camaraVirtual.transform.position = new Vector3(
             nuevaPosicionX,
-            posicionYFija,
+            jugador.position.y + offsetVertical,
             posicionActual.z
         );
     }
