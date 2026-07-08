@@ -47,7 +47,7 @@ GameObject:
   - component: {fileID: 4094440679805269357}
   m_Layer: 0
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -176,7 +176,7 @@ BoxCollider2D:
   m_Offset: {x: 0.17712319, y: 0}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
-    pivot: {x: 0.5, y: 0.5}
+    pivot: {x: 0.5, y: 0.51}
     oldSize: {x: 1, y: 1.15625}
     newSize: {x: 1, y: 1.15625}
     adaptiveTilingThreshold: 0.5
@@ -234,6 +234,13 @@ MonoBehaviour:
   coyoteTime: 0.12
   jumpBufferTime: 0.12
   groundIgnoreAfterJumpTime: 0.15
+  attackKey: 122
+  minimumAttackTime: 0.15
+  hitboxPivot: {fileID: 0}
+  espadaHitboxCollider: {fileID: 0}
+  espadaHitbox: {fileID: 0}
+  hitboxMaxActiveTime: 0.25
+  cuerpoCollider: {fileID: 0}
   normalGravity: 3
   fallGravityMultiplier: 1.8
   maxFallSpeed: 14
