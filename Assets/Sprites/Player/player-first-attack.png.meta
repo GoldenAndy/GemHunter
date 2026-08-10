@@ -118,7 +118,7 @@ TextureImporter:
         width: 58
         height: 38
       alignment: 9
-      pivot: {x: 0.2657227, y: 0.46}
+      pivot: {x: 0.2657227, y: 0.47}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -139,7 +139,7 @@ TextureImporter:
         width: 61
         height: 37
       alignment: 9
-      pivot: {x: 0.26002577, y: 0.52}
+      pivot: {x: 0.2600258, y: 0.51}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -160,7 +160,7 @@ TextureImporter:
         width: 59
         height: 29
       alignment: 9
-      pivot: {x: 0.23944971, y: 0.56}
+      pivot: {x: 0.23944971, y: 0.61}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -168,27 +168,6 @@ TextureImporter:
       bones: []
       spriteID: 5d544897847b6ad47b0034649e305982
       internalID: -675808989
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: player-attack_3
-      rect:
-        serializedVersion: 2
-        x: 361
-        y: 53
-        width: 4
-        height: 4
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: c03d680f06611554195e3f3f7cfd1b77
-      internalID: 959267838
       vertices: []
       indices: 
       edges: []
