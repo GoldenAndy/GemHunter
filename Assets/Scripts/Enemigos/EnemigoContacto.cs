@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 [RequireComponent(typeof(Collider2D))]
@@ -7,11 +8,36 @@ public class EnemigoContacto : MonoBehaviour
     [SerializeField] private int dano = 1;
     [SerializeField] private float fuerzaEmpuje = 6f;
 
+    [Header("Frecuencia de daño")]
+    [Tooltip("Tiempo mínimo que debe pasar antes de volver a dañar.")]
+    [SerializeField] private float tiempoEntreDanos = 0.75f;
+
+    [Header("Dirección del empuje")]
+    [Tooltip(
+        "Evita que enemigos voladores empujen al jugador " +
+        "hacia abajo atravesando el suelo."
+    )]
+    [SerializeField] private bool empujeSoloHorizontal = true;
+
     [Header("Filtros")]
     [SerializeField] private LayerMask capasObjetivo;
 
+    /*
+     * Permite que otros scripts sepan cuándo este enemigo
+     * consiguió aplicar daño.
+     *
+     * El Vector2 contiene la dirección en la que
+     * fue empujado el jugador.
+     */
+    public event Action<Vector2> OnDanoAplicado;
+
+    private float siguienteDanoPermitido;
+
     private void OnCollisionEnter2D(Collision2D collision)
     {
+        if (collision.contactCount <= 0)
+            return;
+
         IntentarDañar(
             collision.collider,
             collision.GetContact(0).point
@@ -20,6 +46,9 @@ public class EnemigoContacto : MonoBehaviour
 
     private void OnCollisionStay2D(Collision2D collision)
     {
+        if (collision.contactCount <= 0)
+            return;
+
         IntentarDañar(
             collision.collider,
             collision.GetContact(0).point
@@ -28,16 +57,24 @@ public class EnemigoContacto : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        Vector2 puntoImpacto = other.ClosestPoint(transform.position);
+        Vector2 puntoImpacto =
+            other.ClosestPoint(transform.position);
 
-        IntentarDañar(other, puntoImpacto);
+        IntentarDañar(
+            other,
+            puntoImpacto
+        );
     }
 
     private void OnTriggerStay2D(Collider2D other)
     {
-        Vector2 puntoImpacto = other.ClosestPoint(transform.position);
+        Vector2 puntoImpacto =
+            other.ClosestPoint(transform.position);
 
-        IntentarDañar(other, puntoImpacto);
+        IntentarDañar(
+            other,
+            puntoImpacto
+        );
     }
 
     private void IntentarDañar(
@@ -47,52 +84,129 @@ public class EnemigoContacto : MonoBehaviour
         if (other == null)
             return;
 
-        /*
-        * Si el Collider pertenece a la espada o está dentro
-        * de su jerarquía, el enemigo debe ignorarlo.
-        */
+        // ================================================
+        // COOLDOWN
+        // ================================================
+
+        if (Time.time < siguienteDanoPermitido)
+            return;
+
+        // ================================================
+        // IGNORAR ESPADA
+        // ================================================
+
         EspadaHitbox espada =
             other.GetComponentInParent<EspadaHitbox>();
 
         if (espada != null)
             return;
 
+        // ================================================
+        // FILTRO DE CAPA
+        // ================================================
+
         if (!EstaEnCapaObjetivo(other.gameObject.layer))
             return;
 
-        IDamageable damageable = BuscarDamageable(other);
+        // ================================================
+        // BUSCAR OBJETO QUE RECIBE DAÑO
+        // ================================================
+
+        IDamageable damageable =
+            BuscarDamageable(other);
 
         if (damageable == null)
             return;
 
-        Vector2 centroObjetivo = other.bounds.center;
-        Vector2 centroEnemigo = transform.position;
+        // ================================================
+        // DIRECCIÓN DEL EMPUJE
+        // ================================================
 
-        Vector2 direccionEmpuje =
-            (centroObjetivo - centroEnemigo).normalized;
+        Vector2 centroObjetivo =
+            other.bounds.center;
 
-        if (direccionEmpuje == Vector2.zero)
+        Vector2 centroEnemigo =
+            transform.position;
+
+        Vector2 diferencia =
+            centroObjetivo - centroEnemigo;
+
+        Vector2 direccionEmpuje;
+
+        if (empujeSoloHorizontal)
         {
-            direccionEmpuje = Vector2.right;
+            float direccionX =
+                Mathf.Sign(diferencia.x);
+
+            /*
+             * Si están exactamente uno encima del otro,
+             * evitamos una dirección de cero.
+             */
+            if (Mathf.Abs(diferencia.x) < 0.01f)
+            {
+                direccionX = 1f;
+            }
+
+            direccionEmpuje =
+                new Vector2(direccionX, 0f);
+        }
+        else
+        {
+            direccionEmpuje =
+                diferencia.normalized;
+
+            if (direccionEmpuje == Vector2.zero)
+            {
+                direccionEmpuje =
+                    Vector2.right;
+            }
         }
 
-        DamageInfo damageInfo = new DamageInfo(
-            dano,
-            gameObject,
-            puntoImpacto,
-            direccionEmpuje,
-            fuerzaEmpuje
+        // ================================================
+        // CREAR INFORMACIÓN DE DAÑO
+        // ================================================
+
+        DamageInfo damageInfo =
+            new DamageInfo(
+                dano,
+                gameObject,
+                puntoImpacto,
+                direccionEmpuje,
+                fuerzaEmpuje
+            );
+
+        // ================================================
+        // APLICAR DAÑO
+        // ================================================
+
+        damageable.RecibirDano(
+            damageInfo
         );
 
-        damageable.RecibirDano(damageInfo);
+        /*
+         * Desde este momento no podrá volver
+         * a golpear hasta terminar el cooldown.
+         */
+        siguienteDanoPermitido =
+            Time.time + tiempoEntreDanos;
+
+        /*
+         * Avisamos al enemigo que acaba
+         * de acertar el golpe.
+         */
+        OnDanoAplicado?.Invoke(
+            direccionEmpuje
+        );
     }
 
-    private IDamageable BuscarDamageable(Collider2D other)
+    private IDamageable BuscarDamageable(
+        Collider2D other)
     {
         MonoBehaviour[] componentes =
             other.GetComponentsInParent<MonoBehaviour>();
 
-        foreach (MonoBehaviour componente in componentes)
+        foreach (MonoBehaviour componente
+                 in componentes)
         {
             if (componente is IDamageable damageable)
             {
@@ -105,6 +219,8 @@ public class EnemigoContacto : MonoBehaviour
 
     private bool EstaEnCapaObjetivo(int layer)
     {
-        return (capasObjetivo.value & (1 << layer)) != 0;
+        return
+            (capasObjetivo.value &
+            (1 << layer)) != 0;
     }
 }

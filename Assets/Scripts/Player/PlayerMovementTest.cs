@@ -36,16 +36,59 @@ public class PlayerMovementTest : MonoBehaviour
     [SerializeField] private float fallGravityMultiplier = 1.8f;
     [SerializeField] private float maxFallSpeed = 14f;
 
+    // ============================================================
+    // DETECCIÓN DE SUELO
+    // ============================================================
+
     [Header("Detección de suelo")]
-    [SerializeField] private Transform groundCheck;
-    [SerializeField] private float groundCheckRadius = 0.08f;
+
+    [Tooltip("Layers que serán consideradas como suelo.")]
     [SerializeField] private LayerMask groundLayer;
+
+    [Tooltip(
+        "Cantidad mínima de componente vertical que debe tener " +
+        "la normal del contacto para considerarlo suelo. " +
+        "Un valor bajo permite reconocer mejor los bordes.")]
+    [Range(0.05f, 1f)]
+    [SerializeField] private float normalMinimaSuelo = 0.15f;
+
+    [Tooltip(
+        "Pequeña tolerancia para considerar contactos cercanos " +
+        "a la mitad inferior del collider como suelo.")]
+    [SerializeField] private float toleranciaContactoSuelo = 0.03f;
+
+    // ============================================================
+    // COMPONENTES
+    // ============================================================
 
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
     private Animator animator;
 
     private Vector2 cuerpoColliderOffsetOriginal;
+
+    // ============================================================
+    // CONTACTOS FÍSICOS
+    // ============================================================
+
+    /*
+     * Reutilizamos siempre el mismo array.
+     *
+     * Aquí Unity colocará los puntos donde el collider del jugador
+     * está tocando otros colliders.
+     */
+    private readonly ContactPoint2D[] contactosSuelo =
+        new ContactPoint2D[16];
+
+    /*
+     * El filtro garantiza que solamente nos interesen contactos
+     * con objetos pertenecientes a Ground Layer.
+     */
+    private ContactFilter2D filtroSuelo;
+
+    // ============================================================
+    // ESTADO
+    // ============================================================
 
     private float horizontalInput;
     private bool isRunning;
@@ -61,9 +104,14 @@ public class PlayerMovementTest : MonoBehaviour
 
     private float hitboxActiveCounter;
     private bool isSwordHitboxActive;
+
     private float bloqueoMovimientoPorDano;
     private bool recibiendoDano;
     private bool estaMuerto;
+
+    // ============================================================
+    // AWAKE
+    // ============================================================
 
     private void Awake()
     {
@@ -78,8 +126,39 @@ public class PlayerMovementTest : MonoBehaviour
 
         if (cuerpoCollider != null)
         {
-            cuerpoColliderOffsetOriginal = cuerpoCollider.offset;
+            cuerpoColliderOffsetOriginal =
+                cuerpoCollider.offset;
+
+            /*
+             * El collider corporal NO debe ser Trigger.
+             *
+             * Necesitamos contactos físicos reales para detectar
+             * correctamente el suelo.
+             */
+            if (cuerpoCollider.isTrigger)
+            {
+                Debug.LogWarning(
+                    "El collider corporal tiene Is Trigger activado. " +
+                    "Desactívalo para que la detección de suelo funcione.",
+                    this
+                );
+            }
         }
+        else
+        {
+            Debug.LogError(
+                "No se encontró el collider corporal del jugador.",
+                this
+            );
+        }
+
+        /*
+         * Configuramos el filtro que utilizaremos para consultar
+         * únicamente contactos con Ground Layer.
+         */
+        filtroSuelo = new ContactFilter2D();
+        filtroSuelo.SetLayerMask(groundLayer);
+        filtroSuelo.useTriggers = false;
 
         rb.gravityScale = normalGravity;
         rb.freezeRotation = true;
@@ -87,6 +166,10 @@ public class PlayerMovementTest : MonoBehaviour
         DesactivarEspadaHitbox();
         ActualizarDireccionHitbox();
     }
+
+    // ============================================================
+    // UPDATE
+    // ============================================================
 
     private void Update()
     {
@@ -108,10 +191,21 @@ public class PlayerMovementTest : MonoBehaviour
             isRunning = false;
         }
 
+        /*
+         * Ya NO usamos GroundCheck.
+         *
+         * Ahora consultamos directamente los contactos físicos
+         * del collider del jugador.
+         */
         DetectarSuelo();
+
         ActualizarTiempoHitbox();
         ActualizarAnimator();
     }
+
+    // ============================================================
+    // FIXED UPDATE
+    // ============================================================
 
     private void FixedUpdate()
     {
@@ -126,6 +220,10 @@ public class PlayerMovementTest : MonoBehaviour
         AplicarGravedadMejorada();
     }
 
+    // ============================================================
+    // DAÑO
+    // ============================================================
+
     private void ActualizarBloqueoPorDano()
     {
         if (!recibiendoDano)
@@ -134,17 +232,20 @@ public class PlayerMovementTest : MonoBehaviour
         bloqueoMovimientoPorDano -= Time.deltaTime;
 
         bool estaEnHurt =
-            animator.GetCurrentAnimatorStateInfo(0).IsName("Player_Hurt");
+            animator.GetCurrentAnimatorStateInfo(0)
+                .IsName("Player_Hurt");
 
         bool estaEntrandoEnHurt =
             animator.IsInTransition(0) &&
-            animator.GetNextAnimatorStateInfo(0).IsName("Player_Hurt");
+            animator.GetNextAnimatorStateInfo(0)
+                .IsName("Player_Hurt");
 
         /*
-        * El control vuelve únicamente cuando:
-        * 1. Terminó el tiempo mínimo de bloqueo.
-        * 2. El Animator ya salió de Player_Hurt.
-        */
+         * El control vuelve únicamente cuando:
+         *
+         * 1. Terminó el tiempo mínimo de bloqueo.
+         * 2. El Animator ya salió de Player_Hurt.
+         */
         if (bloqueoMovimientoPorDano <= 0f &&
             !estaEnHurt &&
             !estaEntrandoEnHurt)
@@ -153,10 +254,13 @@ public class PlayerMovementTest : MonoBehaviour
             recibiendoDano = false;
 
             canInterruptAttack = true;
-            animator.SetBool("CanInterruptAttack", true);
+
+            animator.SetBool(
+                "CanInterruptAttack",
+                true
+            );
         }
     }
-
 
     public void RecibirImpacto(
         Vector2 direccion,
@@ -170,41 +274,43 @@ public class PlayerMovementTest : MonoBehaviour
         isRunning = false;
 
         /*
-        * Durante la animación de daño bloqueamos las transiciones
-        * de Any State hacia Jump y Fall.
-        */
+         * Durante la animación de daño bloqueamos las
+         * transiciones de Any State hacia Jump y Fall.
+         */
         canInterruptAttack = false;
         attackInterruptCounter = 0f;
 
-        // Cancela cualquier ataque pendiente.
         animator.ResetTrigger("Attack");
 
-        // Actualizamos el parámetro inmediatamente.
-        animator.SetBool("CanInterruptAttack", false);
+        animator.SetBool(
+            "CanInterruptAttack",
+            false
+        );
 
-        // La espada deja de hacer daño al recibir el golpe.
         DesactivarEspadaHitbox();
 
-        float direccionHorizontal = direccion.x;
+        float direccionHorizontal =
+            direccion.x;
 
         if (Mathf.Abs(direccionHorizontal) < 0.01f)
         {
-            direccionHorizontal = mirandoDerecha ? -1f : 1f;
+            direccionHorizontal =
+                mirandoDerecha ? -1f : 1f;
         }
         else
         {
-            direccionHorizontal = Mathf.Sign(direccionHorizontal);
+            direccionHorizontal =
+                Mathf.Sign(direccionHorizontal);
         }
 
-        float fuerzaVertical = fuerzaEmpuje * 0.45f;
+        float fuerzaVertical =
+            fuerzaEmpuje * 0.45f;
 
-        // Aplica el retroceso.
         rb.velocity = new Vector2(
             direccionHorizontal * fuerzaEmpuje,
             fuerzaVertical
         );
 
-        // Activa finalmente la animación de daño.
         animator.SetTrigger("Hurt");
 
         Debug.Log(
@@ -214,6 +320,9 @@ public class PlayerMovementTest : MonoBehaviour
         );
     }
 
+    // ============================================================
+    // MUERTE
+    // ============================================================
 
     public void ReproducirMuerte()
     {
@@ -229,107 +338,217 @@ public class PlayerMovementTest : MonoBehaviour
         canInterruptAttack = false;
         attackInterruptCounter = 0f;
 
-        // La espada deja de estar activa al morir.
         DesactivarEspadaHitbox();
 
-        // Cancelamos animaciones pendientes.
         animator.ResetTrigger("Attack");
         animator.ResetTrigger("Hurt");
 
-        // Bloqueamos transiciones normales desde Any State.
-        animator.SetBool("CanInterruptAttack", false);
+        animator.SetBool(
+            "CanInterruptAttack",
+            false
+        );
 
-        // Detenemos el movimiento horizontal.
-        rb.velocity = new Vector2(0f, rb.velocity.y);
+        rb.velocity =
+            new Vector2(0f, rb.velocity.y);
 
-    // Activamos la animación final.
-    animator.SetTrigger("Death");
+        animator.SetTrigger("Death");
 
-    Debug.Log("Animación de muerte activada.");
-}
+        Debug.Log(
+            "Animación de muerte activada."
+        );
+    }
 
+    // ============================================================
+    // INPUT
+    // ============================================================
 
     private void LeerInput()
     {
-        horizontalInput = Input.GetAxisRaw("Horizontal");
+        horizontalInput =
+            Input.GetAxisRaw("Horizontal");
 
-        bool isMoving = Mathf.Abs(horizontalInput) > 0.01f;
+        bool isMoving =
+            Mathf.Abs(horizontalInput) > 0.01f;
 
-        isRunning = isMoving &&
-                    (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
+        isRunning =
+            isMoving &&
+            (
+                Input.GetKey(KeyCode.LeftShift) ||
+                Input.GetKey(KeyCode.RightShift)
+            );
 
         if (Input.GetKeyDown(KeyCode.X))
         {
-            jumpBufferCounter = jumpBufferTime;
+            jumpBufferCounter =
+                jumpBufferTime;
         }
         else
         {
-            jumpBufferCounter -= Time.deltaTime;
+            jumpBufferCounter -=
+                Time.deltaTime;
         }
     }
+
+    // ============================================================
+    // DETECCIÓN DE SUELO POR CONTACTO REAL
+    // ============================================================
 
     private void DetectarSuelo()
     {
-        if (groundCheck == null)
+        /*
+         * Si por algún motivo no existe el collider,
+         * no podemos detectar suelo.
+         */
+        if (cuerpoCollider == null)
         {
             isGrounded = false;
             return;
         }
 
+        /*
+         * Después de saltar ignoramos brevemente los contactos.
+         *
+         * Esto evita que durante los primeros frames del salto
+         * Unity todavía considere el contacto anterior con el suelo.
+         */
         if (groundIgnoreCounter > 0f)
         {
-            groundIgnoreCounter -= Time.deltaTime;
+            groundIgnoreCounter -=
+                Time.deltaTime;
+
             isGrounded = false;
-            coyoteTimeCounter -= Time.deltaTime;
+
+            coyoteTimeCounter -=
+                Time.deltaTime;
+
             return;
         }
 
-        RaycastHit2D hit = Physics2D.BoxCast(
-            groundCheck.position,
-            new Vector2(0.25f, 0.05f),
-            0f,
-            Vector2.down,
-            groundCheckRadius,
-            groundLayer
-        );
+        /*
+         * Obtenemos los contactos FÍSICOS REALES del collider.
+         *
+         * El filtro ya limita los resultados a objetos
+         * pertenecientes a Ground Layer.
+         */
+        int cantidadContactos =
+            cuerpoCollider.GetContacts(
+                filtroSuelo,
+                contactosSuelo
+            );
 
-        bool touchingGround =
-            hit.collider != null &&
-            !hit.transform.IsChildOf(transform);
+        bool touchingGround = false;
 
-        isGrounded = touchingGround && rb.velocity.y <= 0.05f;
+        /*
+         * Centro del collider en coordenadas del mundo.
+         *
+         * Lo utilizamos para distinguir entre:
+         *
+         * - contacto debajo del personaje = posible suelo
+         * - contacto encima = techo
+         */
+        float centroColliderY =
+            cuerpoCollider.bounds.center.y;
+
+        for (int i = 0; i < cantidadContactos; i++)
+        {
+            ContactPoint2D contacto =
+                contactosSuelo[i];
+
+            /*
+             * El contacto tiene que ocurrir en la mitad inferior
+             * del collider.
+             *
+             * Esto evita considerar el techo como suelo.
+             */
+            bool contactoEnParteInferior =
+                contacto.point.y <=
+                centroColliderY +
+                toleranciaContactoSuelo;
+
+            /*
+             * Una pared completamente vertical tendría una normal
+             * prácticamente horizontal:
+             *
+             * normal.y ≈ 0
+             *
+             * Por eso NO la consideramos suelo.
+             *
+             * Un borde o esquina puede producir una normal diagonal,
+             * así que aceptamos valores pequeños de Y.
+             */
+            bool tieneComponenteVertical =
+                Mathf.Abs(contacto.normal.y) >=
+                normalMinimaSuelo;
+
+            /*
+             * Además, solo tiene sentido quedar Grounded si
+             * no estamos desplazándonos claramente hacia arriba.
+             */
+            bool noEstaSubiendo =
+                rb.velocity.y <= 0.05f;
+
+            if (contactoEnParteInferior &&
+                tieneComponenteVertical &&
+                noEstaSubiendo)
+            {
+                touchingGround = true;
+                break;
+            }
+        }
+
+        isGrounded = touchingGround;
 
         if (isGrounded)
         {
-            coyoteTimeCounter = coyoteTime;
+            coyoteTimeCounter =
+                coyoteTime;
         }
         else
         {
-            coyoteTimeCounter -= Time.deltaTime;
+            coyoteTimeCounter -=
+                Time.deltaTime;
         }
     }
 
+    // ============================================================
+    // SALTO
+    // ============================================================
+
     private void ControlarSalto()
     {
-        if (jumpBufferCounter > 0f && coyoteTimeCounter > 0f)
+        if (jumpBufferCounter > 0f &&
+            coyoteTimeCounter > 0f)
         {
-            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+            rb.velocity =
+                new Vector2(
+                    rb.velocity.x,
+                    jumpForce
+                );
 
             isGrounded = false;
-            groundIgnoreCounter = groundIgnoreAfterJumpTime;
+
+            groundIgnoreCounter =
+                groundIgnoreAfterJumpTime;
 
             jumpBufferCounter = 0f;
             coyoteTimeCounter = 0f;
         }
 
-        if (Input.GetKeyUp(KeyCode.X) && rb.velocity.y > 0f)
+        if (Input.GetKeyUp(KeyCode.X) &&
+            rb.velocity.y > 0f)
         {
-            rb.velocity = new Vector2(
-                rb.velocity.x,
-                rb.velocity.y * jumpCutMultiplier
-            );
+            rb.velocity =
+                new Vector2(
+                    rb.velocity.x,
+                    rb.velocity.y *
+                    jumpCutMultiplier
+                );
         }
     }
+
+    // ============================================================
+    // ATAQUE
+    // ============================================================
 
     private void ControlarAtaque()
     {
@@ -338,12 +557,15 @@ public class PlayerMovementTest : MonoBehaviour
             animator.SetTrigger("Attack");
 
             canInterruptAttack = false;
-            attackInterruptCounter = minimumAttackTime;
+
+            attackInterruptCounter =
+                minimumAttackTime;
         }
 
         if (!canInterruptAttack)
         {
-            attackInterruptCounter -= Time.deltaTime;
+            attackInterruptCounter -=
+                Time.deltaTime;
 
             if (attackInterruptCounter <= 0f)
             {
@@ -354,9 +576,11 @@ public class PlayerMovementTest : MonoBehaviour
 
     private void ActualizarTiempoHitbox()
     {
-        if (!isSwordHitboxActive) return;
+        if (!isSwordHitboxActive)
+            return;
 
-        hitboxActiveCounter -= Time.deltaTime;
+        hitboxActiveCounter -=
+            Time.deltaTime;
 
         if (hitboxActiveCounter <= 0f)
         {
@@ -364,46 +588,83 @@ public class PlayerMovementTest : MonoBehaviour
         }
     }
 
+    // ============================================================
+    // MOVIMIENTO
+    // ============================================================
+
     private void MoverPersonaje()
     {
-        float currentSpeed = isRunning ? runSpeed : walkSpeed;
-        float targetSpeed = horizontalInput * currentSpeed;
+        float currentSpeed =
+            isRunning
+                ? runSpeed
+                : walkSpeed;
 
-        float speedDifference = targetSpeed - rb.velocity.x;
+        float targetSpeed =
+            horizontalInput *
+            currentSpeed;
 
-        float movementRate = Mathf.Abs(targetSpeed) > 0.01f
-            ? acceleration
-            : deceleration;
+        float speedDifference =
+            targetSpeed -
+            rb.velocity.x;
 
-        float movement = speedDifference * movementRate;
+        float movementRate =
+            Mathf.Abs(targetSpeed) > 0.01f
+                ? acceleration
+                : deceleration;
 
-        rb.AddForce(Vector2.right * movement);
+        float movement =
+            speedDifference *
+            movementRate;
 
-        if (Mathf.Abs(rb.velocity.x) > currentSpeed)
+        rb.AddForce(
+            Vector2.right *
+            movement
+        );
+
+        if (Mathf.Abs(rb.velocity.x) >
+            currentSpeed)
         {
-            rb.velocity = new Vector2(
-                Mathf.Sign(rb.velocity.x) * currentSpeed,
-                rb.velocity.y
-            );
+            rb.velocity =
+                new Vector2(
+                    Mathf.Sign(rb.velocity.x) *
+                    currentSpeed,
+                    rb.velocity.y
+                );
         }
     }
+
+    // ============================================================
+    // GRAVEDAD
+    // ============================================================
 
     private void AplicarGravedadMejorada()
     {
         if (rb.velocity.y < 0f)
         {
-            rb.gravityScale = normalGravity * fallGravityMultiplier;
+            rb.gravityScale =
+                normalGravity *
+                fallGravityMultiplier;
         }
         else
         {
-            rb.gravityScale = normalGravity;
+            rb.gravityScale =
+                normalGravity;
         }
 
-        if (rb.velocity.y < -maxFallSpeed)
+        if (rb.velocity.y <
+            -maxFallSpeed)
         {
-            rb.velocity = new Vector2(rb.velocity.x, -maxFallSpeed);
+            rb.velocity =
+                new Vector2(
+                    rb.velocity.x,
+                    -maxFallSpeed
+                );
         }
     }
+
+    // ============================================================
+    // DIRECCIÓN
+    // ============================================================
 
     private void GirarPersonaje()
     {
@@ -425,27 +686,67 @@ public class PlayerMovementTest : MonoBehaviour
     {
         if (hitboxPivot != null)
         {
-            hitboxPivot.localScale = mirandoDerecha
-                ? new Vector3(1f, 1f, 1f)
-                : new Vector3(-1f, 1f, 1f);
+            hitboxPivot.localScale =
+                mirandoDerecha
+                    ? new Vector3(1f, 1f, 1f)
+                    : new Vector3(-1f, 1f, 1f);
         }
 
+        /*
+         * El collider del cuerpo conserva exactamente
+         * su forma y tamaño originales.
+         *
+         * Únicamente invertimos el Offset X al mirar
+         * hacia la izquierda, tal como hacía el
+         * script original.
+         */
         if (cuerpoCollider != null)
         {
-            cuerpoCollider.offset = mirandoDerecha
-                ? cuerpoColliderOffsetOriginal
-                : new Vector2(-cuerpoColliderOffsetOriginal.x, cuerpoColliderOffsetOriginal.y);
+            cuerpoCollider.offset =
+                mirandoDerecha
+                    ? cuerpoColliderOffsetOriginal
+                    : new Vector2(
+                        -cuerpoColliderOffsetOriginal.x,
+                        cuerpoColliderOffsetOriginal.y
+                    );
         }
     }
+
+    // ============================================================
+    // ANIMATOR
+    // ============================================================
 
     private void ActualizarAnimator()
     {
-        animator.SetFloat("Speed", Mathf.Abs(horizontalInput));
-        animator.SetBool("IsRunning", isRunning);
-        animator.SetBool("IsGrounded", isGrounded);
-        animator.SetFloat("VerticalSpeed", rb.velocity.y);
-        animator.SetBool("CanInterruptAttack", canInterruptAttack);
+        animator.SetFloat(
+            "Speed",
+            Mathf.Abs(horizontalInput)
+        );
+
+        animator.SetBool(
+            "IsRunning",
+            isRunning
+        );
+
+        animator.SetBool(
+            "IsGrounded",
+            isGrounded
+        );
+
+        animator.SetFloat(
+            "VerticalSpeed",
+            rb.velocity.y
+        );
+
+        animator.SetBool(
+            "CanInterruptAttack",
+            canInterruptAttack
+        );
     }
+
+    // ============================================================
+    // HITBOX DE ESPADA
+    // ============================================================
 
     public void ActivarEspadaHitbox()
     {
@@ -459,31 +760,25 @@ public class PlayerMovementTest : MonoBehaviour
 
         if (espadaHitboxCollider != null)
         {
-            espadaHitboxCollider.enabled = true;
+            espadaHitboxCollider.enabled =
+                true;
         }
 
         isSwordHitboxActive = true;
-        hitboxActiveCounter = hitboxMaxActiveTime;
+
+        hitboxActiveCounter =
+            hitboxMaxActiveTime;
     }
 
     public void DesactivarEspadaHitbox()
     {
         if (espadaHitboxCollider != null)
         {
-            espadaHitboxCollider.enabled = false;
+            espadaHitboxCollider.enabled =
+                false;
         }
 
         isSwordHitboxActive = false;
         hitboxActiveCounter = 0f;
     }
-
-    private void OnDrawGizmosSelected()
-    {
-        if (groundCheck == null) return;
-
-        Gizmos.DrawWireCube(
-            groundCheck.position + Vector3.down * groundCheckRadius / 2f,
-            new Vector3(0.25f, groundCheckRadius, 0f));
-    }
-    
 }
