@@ -3,134 +3,165 @@ using UnityEngine.SceneManagement;
 
 public class MenuPausa : MonoBehaviour
 {
+    [Header("Menu")]
     public GameObject menuPausaCompleto;
-    public string escenaMenuPrincipal = "MenuPrincipal";
+    public GameObject panelOptionsPausa;
 
+    [Header("Indicador")]
     public RectTransform indicadorSeleccion;
 
-    public float posicionXIndicador = -145f;
+    [Header("Posiciones")]
+    public float posicionX = -36f;
+    public float posicionYResume = 20f;
+    public float posicionYOptions = 0f;
+    public float posicionYExit = -20f;
 
-    public float posicionYPlay = 105f;
-    public float posicionYLoad = 30f;
-    public float posicionYExit = -45f;
+    private int opcionSeleccionada = 0;
+    private bool pausado = false;
+    private bool optionsAbierto = false;
 
-    private bool juegoPausado = false;
-    private int opcionSeleccionada = 1;
-
-    void Start()
+    private void Start()
     {
         menuPausaCompleto.SetActive(false);
+
+        if (panelOptionsPausa != null)
+            panelOptionsPausa.SetActive(false);
+
         Time.timeScale = 1f;
     }
 
-    void Update()
+    private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            if (juegoPausado)
+            if (optionsAbierto)
             {
+                CerrarOptions();
+                return;
+            }
+
+            if (pausado)
                 Reanudar();
-            }
             else
-            {
                 Pausar();
-            }
+
+            return;
         }
 
-        if (juegoPausado)
+        if (!pausado || optionsAbierto)
+            return;
+
+        if (Input.GetKeyDown(KeyCode.DownArrow) ||
+            Input.GetKeyDown(KeyCode.S))
         {
-            if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S))
-            {
-                opcionSeleccionada++;
+            opcionSeleccionada++;
 
-                if (opcionSeleccionada > 2)
-                {
-                    opcionSeleccionada = 0;
-                }
+            if (opcionSeleccionada > 2)
+                opcionSeleccionada = 0;
 
-                MoverIndicador();
-            }
+            MoverIndicador();
 
-            if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
-            {
-                opcionSeleccionada--;
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.SonidoMover();
+        }
 
-                if (opcionSeleccionada < 0)
-                {
-                    opcionSeleccionada = 2;
-                }
+        if (Input.GetKeyDown(KeyCode.UpArrow) ||
+            Input.GetKeyDown(KeyCode.W))
+        {
+            opcionSeleccionada--;
 
-                MoverIndicador();
-            }
+            if (opcionSeleccionada < 0)
+                opcionSeleccionada = 2;
 
-            if (Input.GetKeyDown(KeyCode.Return))
-            {
-                EjecutarOpcion();
-            }
+            MoverIndicador();
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.SonidoMover();
+        }
+
+        if (Input.GetKeyDown(KeyCode.Return))
+        {
+            EjecutarOpcion();
+        }
+    }
+
+    private void EjecutarOpcion()
+    {
+        if (opcionSeleccionada == 0)
+        {
+            Reanudar();
+        }
+        else if (opcionSeleccionada == 1)
+        {
+            AbrirOptions();
+        }
+        else if (opcionSeleccionada == 2)
+        {
+            SalirAlMenu();
         }
     }
 
     public void Pausar()
     {
+        pausado = true;
         menuPausaCompleto.SetActive(true);
         Time.timeScale = 0f;
-        juegoPausado = true;
 
-        opcionSeleccionada = 1;
+        opcionSeleccionada = 0;
         MoverIndicador();
     }
 
     public void Reanudar()
     {
+        pausado = false;
         menuPausaCompleto.SetActive(false);
         Time.timeScale = 1f;
-        juegoPausado = false;
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.SonidoVolver();
     }
 
-    void MoverIndicador()
+    public void AbrirOptions()
     {
-        float posicionY = posicionYLoad;
+        optionsAbierto = true;
 
-        if (opcionSeleccionada == 0)
-        {
-            posicionY = posicionYPlay;
-        }
-        else if (opcionSeleccionada == 1)
-        {
-            posicionY = posicionYLoad;
-        }
-        else if (opcionSeleccionada == 2)
-        {
-            posicionY = posicionYExit;
-        }
+        menuPausaCompleto.SetActive(false);
+        panelOptionsPausa.SetActive(true);
 
-        indicadorSeleccion.anchoredPosition = new Vector2(posicionXIndicador, posicionY);
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.SonidoSeleccionar();
     }
 
-    void EjecutarOpcion()
+    public void CerrarOptions()
     {
-        if (opcionSeleccionada == 0)
-        {
-            Reanudar();
-        }
-        else if (opcionSeleccionada == 1)
-        {
-            Reanudar();
-        }
-        else if (opcionSeleccionada == 2)
-        {
-            VolverAlMenu();
-        }
+        optionsAbierto = false;
+
+        panelOptionsPausa.SetActive(false);
+        menuPausaCompleto.SetActive(true);
+
+        MoverIndicador();
     }
 
-    public void VolverAlMenu()
+    public void SalirAlMenu()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene(escenaMenuPrincipal);
+
+        SceneManager.LoadScene("MenuPrincipal");
     }
 
-    public void Salir()
+    private void MoverIndicador()
     {
-        Application.Quit();
+        if (indicadorSeleccion == null)
+            return;
+
+        float y = posicionYResume;
+
+        if (opcionSeleccionada == 1)
+            y = posicionYOptions;
+        else if (opcionSeleccionada == 2)
+            y = posicionYExit;
+
+        indicadorSeleccion.anchoredPosition =
+            new Vector2(posicionX, y);
     }
 }

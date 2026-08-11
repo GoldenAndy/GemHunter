@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-public class OptionsMenu : MonoBehaviour
+public class OptionsPausa : MonoBehaviour
 {
     [Header("Controles")]
     public VolumeBarUI barraMusic;
@@ -18,14 +18,13 @@ public class OptionsMenu : MonoBehaviour
     public float posicionYFullscreen = -20f;
     public float posicionYBack = -35f;
 
-    [Header("Menu Principal")]
-    public MenuPrincipal menuPrincipal;
+    [Header("Menu de Pausa")]
+    public MenuPausa menuPausa;
 
     private int opcionSeleccionada = 0;
 
     private void Start()
     {
-        // Cargar estado guardado de pantalla completa
         bool fullscreenGuardado =
             PlayerPrefs.GetInt(
                 "Fullscreen",
@@ -33,6 +32,7 @@ public class OptionsMenu : MonoBehaviour
             ) == 1;
 
         toggleFullscreen.SetIsOnWithoutNotify(fullscreenGuardado);
+
         Screen.fullScreen = fullscreenGuardado;
 
         MoverIndicador();
@@ -51,7 +51,7 @@ public class OptionsMenu : MonoBehaviour
 
     private void Update()
     {
-        // BAJAR ENTRE OPCIONES
+        // BAJAR
         if (Input.GetKeyDown(KeyCode.DownArrow) ||
             Input.GetKeyDown(KeyCode.S))
         {
@@ -66,7 +66,7 @@ public class OptionsMenu : MonoBehaviour
                 AudioManager.Instance.SonidoMover();
         }
 
-        // SUBIR ENTRE OPCIONES
+        // SUBIR
         if (Input.GetKeyDown(KeyCode.UpArrow) ||
             Input.GetKeyDown(KeyCode.W))
         {
@@ -95,13 +95,13 @@ public class OptionsMenu : MonoBehaviour
             CambiarValor(0.1f);
         }
 
-        // SELECCIONAR
+        // ENTER
         if (Input.GetKeyDown(KeyCode.Return))
         {
             EjecutarOpcion();
         }
 
-        // VOLVER
+        // ESCAPE
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             Volver();
@@ -110,24 +110,16 @@ public class OptionsMenu : MonoBehaviour
 
     private void CambiarValor(float cantidad)
     {
-        // MUSIC
         if (opcionSeleccionada == 0)
         {
-            if (barraMusic == null)
-                return;
-
             if (cantidad < 0)
                 barraMusic.Bajar();
             else
                 barraMusic.Subir();
         }
 
-        // SFX
         else if (opcionSeleccionada == 1)
         {
-            if (barraSFX == null)
-                return;
-
             if (cantidad < 0)
                 barraSFX.Bajar();
             else
@@ -137,6 +129,7 @@ public class OptionsMenu : MonoBehaviour
 
     private void EjecutarOpcion()
     {
+        // FULLSCREEN
         if (opcionSeleccionada == 2)
         {
             if (AudioManager.Instance != null)
@@ -148,13 +141,13 @@ public class OptionsMenu : MonoBehaviour
             return;
         }
 
+        // BACK
         if (opcionSeleccionada == 3)
         {
             if (AudioManager.Instance != null)
                 AudioManager.Instance.SonidoVolver();
 
             Volver();
-
             return;
         }
     }
@@ -167,17 +160,13 @@ public class OptionsMenu : MonoBehaviour
         float y = posicionYMusic;
 
         if (opcionSeleccionada == 1)
-        {
             y = posicionYSFX;
-        }
+
         else if (opcionSeleccionada == 2)
-        {
             y = posicionYFullscreen;
-        }
+
         else if (opcionSeleccionada == 3)
-        {
             y = posicionYBack;
-        }
 
         indicadorOptions.anchoredPosition =
             new Vector2(posicionX, y);
@@ -195,16 +184,16 @@ public class OptionsMenu : MonoBehaviour
         PlayerPrefs.Save();
 
         Debug.Log(
-            "Fullscreen cambiado a: " +
+            "Fullscreen: " +
             (activo ? "ACTIVADO" : "DESACTIVADO")
         );
     }
 
     public void Volver()
     {
-        if (menuPrincipal != null)
+        if (menuPausa != null)
         {
-            menuPrincipal.CerrarOptions();
+            menuPausa.CerrarOptions();
         }
     }
 }
