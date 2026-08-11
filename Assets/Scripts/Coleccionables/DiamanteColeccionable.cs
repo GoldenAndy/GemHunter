@@ -6,7 +6,7 @@ public class DiamanteColeccionable : MonoBehaviour
     [SerializeField] private TMP_Text textoGemas;
 
     private int gemas = 0;
-    private int totalGemas = 1;
+    private int totalGemas = 3;
 
     private void Start()
     {
