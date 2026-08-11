@@ -5,17 +5,23 @@ public class AudioManager : MonoBehaviour
     public static AudioManager Instance;
 
     [Header("Audio Sources")]
-    public AudioSource musicSource;
-    public AudioSource sfxSource;
+    [SerializeField] private AudioSource musicSource;
+    [SerializeField] private AudioSource sfxSource;
 
     [Header("Music")]
-    public AudioClip musicaMenu;
-    public AudioClip musicaJuego;
+    [SerializeField] private AudioClip musicaMenu;
+    [SerializeField] private AudioClip musicaJuego;
 
-    [Header("Sonidos UI")]
-    public AudioClip sonidoMover;
-    public AudioClip sonidoSeleccionar;
-    public AudioClip sonidoVolver;
+    [Header("UI Sounds")]
+    [SerializeField] private AudioClip sonidoMover;
+    [SerializeField] private AudioClip sonidoSeleccionar;
+    [SerializeField] private AudioClip sonidoVolver;
+
+    private const string MUSIC_KEY = "VolumenMusica";
+    private const string SFX_KEY = "VolumenSFX";
+
+    private float volumenMusica = 0.7f;
+    private float volumenSFX = 1f;
 
     private void Awake()
     {
@@ -27,12 +33,9 @@ public class AudioManager : MonoBehaviour
 
         Instance = this;
         DontDestroyOnLoad(gameObject);
-    }
 
-    private void Start()
-    {
         CargarVolumenes();
-        ReproducirMusicaMenu();
+        AplicarVolumenes();
     }
 
     public void ReproducirMusicaMenu()
@@ -73,52 +76,58 @@ public class AudioManager : MonoBehaviour
         ReproducirSFX(sonidoVolver);
     }
 
-    private void ReproducirSFX(AudioClip clip)
+    public void ReproducirSFX(AudioClip clip)
     {
-        if (clip != null && sfxSource != null)
-        {
-            sfxSource.PlayOneShot(clip);
-        }
+        if (clip == null || sfxSource == null)
+            return;
+
+        sfxSource.PlayOneShot(clip);
     }
 
-    public void CambiarVolumenMusica(float volumen)
+    public void CambiarVolumenMusica(float valor)
     {
-        musicSource.volume = volumen;
+        volumenMusica = Mathf.Clamp01(valor);
 
-        PlayerPrefs.SetFloat("VolumenMusica", volumen);
+        if (musicSource != null)
+            musicSource.volume = volumenMusica;
+
+        PlayerPrefs.SetFloat(MUSIC_KEY, volumenMusica);
         PlayerPrefs.Save();
     }
 
-    public void CambiarVolumenSFX(float volumen)
+    public void CambiarVolumenSFX(float valor)
     {
-        sfxSource.volume = volumen;
+        volumenSFX = Mathf.Clamp01(valor);
 
-        PlayerPrefs.SetFloat("VolumenSFX", volumen);
+        if (sfxSource != null)
+            sfxSource.volume = volumenSFX;
+
+        PlayerPrefs.SetFloat(SFX_KEY, volumenSFX);
         PlayerPrefs.Save();
+    }
+
+    public float ObtenerVolumenMusica()
+    {
+        return volumenMusica;
+    }
+
+    public float ObtenerVolumenSFX()
+    {
+        return volumenSFX;
     }
 
     private void CargarVolumenes()
     {
-        float volumenMusica =
-            PlayerPrefs.GetFloat("VolumenMusica", 0.7f);
+        volumenMusica = PlayerPrefs.GetFloat(MUSIC_KEY, 0.7f);
+        volumenSFX = PlayerPrefs.GetFloat(SFX_KEY, 1f);
+    }
 
-        float volumenSFX =
-            PlayerPrefs.GetFloat("VolumenSFX", 1f);
-
+    private void AplicarVolumenes()
+    {
         if (musicSource != null)
             musicSource.volume = volumenMusica;
 
         if (sfxSource != null)
             sfxSource.volume = volumenSFX;
-    }
-
-    public float ObtenerVolumenMusica()
-    {
-        return PlayerPrefs.GetFloat("VolumenMusica", 0.7f);
-    }
-
-    public float ObtenerVolumenSFX()
-    {
-        return PlayerPrefs.GetFloat("VolumenSFX", 1f);
     }
 }
