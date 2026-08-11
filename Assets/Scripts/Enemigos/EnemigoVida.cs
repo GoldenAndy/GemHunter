@@ -7,16 +7,14 @@ public class EnemigoVida : MonoBehaviour, IDamageable
     [SerializeField] private int vidaMaxima = 3;
     [SerializeField] private bool destruirAlMorir = true;
 
-    /*
-     * Otros scripts pueden escuchar este evento.
-     * Por ejemplo, MurcielagoEnemy lo utiliza
-     * para retroceder al recibir un espadazo.
-     */
     public event Action<DamageInfo> OnDanoRecibido;
 
     private int vidaActual;
     private Rigidbody2D rb;
     private bool estaMuerto;
+
+    public int VidaActual => vidaActual;
+    public bool EstaMuerto => estaMuerto;
 
     private void Awake()
     {
@@ -29,6 +27,17 @@ public class EnemigoVida : MonoBehaviour, IDamageable
         if (estaMuerto)
             return;
 
+        // =====================================================
+        // FILTROS DE DAÑO RECIBIDO
+        // =====================================================
+
+        if (!FiltrosPermitenDano(damageInfo))
+            return;
+
+        // =====================================================
+        // APLICAR DAÑO
+        // =====================================================
+
         vidaActual -= damageInfo.dano;
 
         Debug.Log(
@@ -36,10 +45,7 @@ public class EnemigoVida : MonoBehaviour, IDamageable
             $"Vida actual: {vidaActual}"
         );
 
-        /*
-         * Avisamos al controlador especial del enemigo
-         * de que acaba de recibir un golpe.
-         */
+        // Avisamos a los controladores especiales del enemigo.
         OnDanoRecibido?.Invoke(damageInfo);
 
         AplicarEmpuje(damageInfo);
@@ -48,6 +54,25 @@ public class EnemigoVida : MonoBehaviour, IDamageable
         {
             Morir();
         }
+    }
+
+    private bool FiltrosPermitenDano(DamageInfo damageInfo)
+    {
+        MonoBehaviour[] componentes =
+            GetComponents<MonoBehaviour>();
+
+        foreach (MonoBehaviour componente in componentes)
+        {
+            if (componente is IFiltroDanoRecibido filtro)
+            {
+                if (!filtro.PuedeRecibirDano(damageInfo))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private void AplicarEmpuje(DamageInfo damageInfo)
