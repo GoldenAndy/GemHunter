@@ -198,7 +198,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a015e219a5ffb14d9036b46a90d49a6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  vidaMaxima: 5
+  vidaMaxima: 2
   destruirAlMorir: 1
 --- !u!114 &1109229407427405958
 MonoBehaviour:
@@ -213,7 +213,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dano: 1
-  fuerzaEmpuje: 4
+  fuerzaEmpuje: 3
   tiempoEntreDanos: 0.75
   empujeSoloHorizontal: 1
   capasObjetivo:
@@ -243,6 +243,12 @@ MonoBehaviour:
   velocidadPicada: 8.5
   anticipacionJugador: 0.2
   tiempoMaximoPicada: 1.6
+  distanciaLateralMinimaPicada: 2.6
+  distanciaLateralMaximaPicada: 4.5
+  anguloMaximoPicadaDesdeHorizontal: 50
+  velocidadPreparacionPicada: 2.8
+  tiempoMaximoPreparacionPicada: 2.5
+  margenPreparacionPicada: 0.25
   capaSuelo:
     serializedVersion: 2
     m_Bits: 8
@@ -287,9 +293,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: de76c56ae5201ee46b9a50ce6ec0ae67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cantidadParpadeos: 3
-  duracionInvisible: 0.06
-  duracionVisible: 0.06
+  cantidadParpadeos: 4
+  duracionInvisible: 0.1
+  duracionVisible: 0.1
 --- !u!114 &5620341446902422696
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -315,3 +321,10 @@ MonoBehaviour:
   vueltasMinimas: 1
   vueltasMaximas: 5
   velocidadSalidaSupergiro: 12
+  distanciaMaximaInicioSuperGiro: 3.5
+  probabilidadSuperGiro: 0.4
+  distanciaPreparacionLateral: 2.8
+  velocidadPreparacionLateral: 7
+  distanciaCruceAtaque: 3
+  toleranciaPreparacionLateral: 0.35
+  offsetAlturaAtaqueLateral: 0
