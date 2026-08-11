@@ -3,26 +3,51 @@ using UnityEngine.SceneManagement;
 
 public class MenuPrincipal : MonoBehaviour
 {
+    [Header("Escena")]
     public string escenaJuego = "Nivel 1";
 
+    [Header("Menú Principal")]
+    public GameObject panelMenuPrincipal;
+    public GameObject panelOptions;
+    public GameObject pressEnter;
+
+    [Header("Indicador")]
     public RectTransform indicadorSeleccion;
 
-    public float posicionXIndicador = -145f;
+    public float posicionXIndicador = -50f;
 
     public float posicionYPlay = 105f;
-    public float posicionYLoad = 30f;
+    public float posicionYOptions = 30f;
     public float posicionYExit = -45f;
 
     private int opcionSeleccionada = 0;
+    private bool optionsAbierto = false;
 
     void Start()
     {
+        panelMenuPrincipal.SetActive(true);
+        panelOptions.SetActive(false);
+
+        if (pressEnter != null)
+            pressEnter.SetActive(true);
+
         MoverIndicador();
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S))
+        if (optionsAbierto)
+        {
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                CerrarOptions();
+            }
+
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.DownArrow) ||
+            Input.GetKeyDown(KeyCode.S))
         {
             opcionSeleccionada++;
 
@@ -32,9 +57,13 @@ public class MenuPrincipal : MonoBehaviour
             }
 
             MoverIndicador();
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.SonidoMover();
         }
 
-        if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
+        if (Input.GetKeyDown(KeyCode.UpArrow) ||
+            Input.GetKeyDown(KeyCode.W))
         {
             opcionSeleccionada--;
 
@@ -44,6 +73,9 @@ public class MenuPrincipal : MonoBehaviour
             }
 
             MoverIndicador();
+
+            if (AudioManager.Instance != null)
+                AudioManager.Instance.SonidoMover();
         }
 
         if (Input.GetKeyDown(KeyCode.Return))
@@ -58,25 +90,34 @@ public class MenuPrincipal : MonoBehaviour
 
         if (opcionSeleccionada == 1)
         {
-            posicionY = posicionYLoad;
+            posicionY = posicionYOptions;
         }
         else if (opcionSeleccionada == 2)
         {
             posicionY = posicionYExit;
         }
 
-        indicadorSeleccion.anchoredPosition = new Vector2(posicionXIndicador, posicionY);
+        indicadorSeleccion.anchoredPosition =
+            new Vector2(
+                posicionXIndicador,
+                posicionY
+            );
     }
 
     void EjecutarOpcion()
     {
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.SonidoSeleccionar();
+        }
+
         if (opcionSeleccionada == 0)
         {
             Jugar();
         }
         else if (opcionSeleccionada == 1)
         {
-            Cargar();
+            AbrirOptions();
         }
         else if (opcionSeleccionada == 2)
         {
@@ -89,13 +130,43 @@ public class MenuPrincipal : MonoBehaviour
         SceneManager.LoadScene(escenaJuego);
     }
 
-    public void Cargar()
+    public void AbrirOptions()
     {
-        SceneManager.LoadScene(escenaJuego);
+        optionsAbierto = true;
+
+        panelMenuPrincipal.SetActive(false);
+        panelOptions.SetActive(true);
+
+        indicadorSeleccion.gameObject.SetActive(false);
+
+        if (pressEnter != null)
+            pressEnter.SetActive(false);
+    }
+
+    public void CerrarOptions()
+    {
+        optionsAbierto = false;
+
+        panelOptions.SetActive(false);
+        panelMenuPrincipal.SetActive(true);
+
+        indicadorSeleccion.gameObject.SetActive(true);
+
+        if (pressEnter != null)
+            pressEnter.SetActive(true);
+
+        MoverIndicador();
+
+        if (AudioManager.Instance != null)
+            AudioManager.Instance.SonidoVolver();
     }
 
     public void Salir()
     {
         Application.Quit();
+
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false;
+#endif
     }
 }
