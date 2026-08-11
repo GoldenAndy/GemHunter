@@ -25,9 +25,6 @@ public class EnemigoContacto : MonoBehaviour
     /*
      * Permite que otros scripts sepan cuándo este enemigo
      * consiguió aplicar daño.
-     *
-     * El Vector2 contiene la dirección en la que
-     * fue empujado el jugador.
      */
     public event Action<Vector2> OnDanoAplicado;
 
@@ -84,16 +81,9 @@ public class EnemigoContacto : MonoBehaviour
         if (other == null)
             return;
 
-        // ================================================
-        // COOLDOWN
-        // ================================================
-
-        if (Time.time < siguienteDanoPermitido)
-            return;
-
-        // ================================================
+        // =====================================================
         // IGNORAR ESPADA
-        // ================================================
+        // =====================================================
 
         EspadaHitbox espada =
             other.GetComponentInParent<EspadaHitbox>();
@@ -101,16 +91,37 @@ public class EnemigoContacto : MonoBehaviour
         if (espada != null)
             return;
 
-        // ================================================
+        // =====================================================
         // FILTRO DE CAPA
-        // ================================================
+        // =====================================================
 
         if (!EstaEnCapaObjetivo(other.gameObject.layer))
             return;
 
-        // ================================================
+        // =====================================================
+        // FILTROS ESPECIALES DEL ENEMIGO
+        // =====================================================
+
+        /*
+         * Enemigos normales simplemente no tendrán ningún
+         * IFiltroDanoContacto y continuarán funcionando igual.
+         *
+         * Enemigos especiales, como el sapo, pueden cancelar
+         * el daño en determinadas situaciones.
+         */
+        if (!FiltrosPermitenDano(other))
+            return;
+
+        // =====================================================
+        // COOLDOWN
+        // =====================================================
+
+        if (Time.time < siguienteDanoPermitido)
+            return;
+
+        // =====================================================
         // BUSCAR OBJETO QUE RECIBE DAÑO
-        // ================================================
+        // =====================================================
 
         IDamageable damageable =
             BuscarDamageable(other);
@@ -118,9 +129,9 @@ public class EnemigoContacto : MonoBehaviour
         if (damageable == null)
             return;
 
-        // ================================================
-        // DIRECCIÓN DEL EMPUJE
-        // ================================================
+        // =====================================================
+        // DIRECCIÓN DE EMPUJE
+        // =====================================================
 
         Vector2 centroObjetivo =
             other.bounds.center;
@@ -138,17 +149,16 @@ public class EnemigoContacto : MonoBehaviour
             float direccionX =
                 Mathf.Sign(diferencia.x);
 
-            /*
-             * Si están exactamente uno encima del otro,
-             * evitamos una dirección de cero.
-             */
             if (Mathf.Abs(diferencia.x) < 0.01f)
             {
                 direccionX = 1f;
             }
 
             direccionEmpuje =
-                new Vector2(direccionX, 0f);
+                new Vector2(
+                    direccionX,
+                    0f
+                );
         }
         else
         {
@@ -162,9 +172,9 @@ public class EnemigoContacto : MonoBehaviour
             }
         }
 
-        // ================================================
-        // CREAR INFORMACIÓN DE DAÑO
-        // ================================================
+        // =====================================================
+        // CREAR DAÑO
+        // =====================================================
 
         DamageInfo damageInfo =
             new DamageInfo(
@@ -175,28 +185,41 @@ public class EnemigoContacto : MonoBehaviour
                 fuerzaEmpuje
             );
 
-        // ================================================
+        // =====================================================
         // APLICAR DAÑO
-        // ================================================
+        // =====================================================
 
         damageable.RecibirDano(
             damageInfo
         );
 
-        /*
-         * Desde este momento no podrá volver
-         * a golpear hasta terminar el cooldown.
-         */
         siguienteDanoPermitido =
             Time.time + tiempoEntreDanos;
 
-        /*
-         * Avisamos al enemigo que acaba
-         * de acertar el golpe.
-         */
         OnDanoAplicado?.Invoke(
             direccionEmpuje
         );
+    }
+
+    private bool FiltrosPermitenDano(
+        Collider2D objetivo)
+    {
+        MonoBehaviour[] componentes =
+            GetComponents<MonoBehaviour>();
+
+        foreach (MonoBehaviour componente
+                 in componentes)
+        {
+            if (componente is IFiltroDanoContacto filtro)
+            {
+                if (!filtro.PuedeDañarPorContacto(objetivo))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     private IDamageable BuscarDamageable(
