@@ -61,7 +61,7 @@ public class ContadorGemas : MonoBehaviour
             return;
 
         textoGemas.text =
-            "Gemas: " +
+            "Gems: " +
             gemasRecogidas +
             "/" +
             totalGemas;
