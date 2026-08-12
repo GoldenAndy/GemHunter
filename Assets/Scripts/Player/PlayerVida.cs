@@ -14,6 +14,10 @@ public class PlayerVida : MonoBehaviour, IDamageable
     [Tooltip("Tiempo durante el cual el jugador no podrá controlar el movimiento.")]
     [SerializeField] private float duracionBloqueoMovimiento = 0.25f;
 
+    [Header("Sonidos")]
+    [SerializeField] private AudioClip sonidoDano;
+    [SerializeField] private AudioClip sonidoMuerte;
+
     private bool esInvulnerable;
     private bool estaMuerto;
 
@@ -59,21 +63,43 @@ public class PlayerVida : MonoBehaviour, IDamageable
         if (playerStats == null)
             return;
 
-        /*
-         * PlayerStats descuenta la vida y avisa automáticamente
-         * al HealthBarController para actualizar los corazones.
-         */
-        playerStats.TakeDamage(damageInfo.dano);
+        playerStats.TakeDamage(
+            damageInfo.dano
+        );
 
         Debug.Log(
             $"{gameObject.name} recibió {damageInfo.dano} de daño. " +
             $"Vida actual: {playerStats.Health}/{playerStats.MaxHealth}"
         );
 
+        // =====================================================
+        // MUERTE
+        // =====================================================
+
         if (playerStats.Health <= 0f)
         {
+            if (AudioManager.Instance != null &&
+                sonidoMuerte != null)
+            {
+                AudioManager.Instance.ReproducirSFX(
+                    sonidoMuerte
+                );
+            }
+
             Morir();
             return;
+        }
+
+        // =====================================================
+        // DAÑO NORMAL
+        // =====================================================
+
+        if (AudioManager.Instance != null &&
+            sonidoDano != null)
+        {
+            AudioManager.Instance.ReproducirSFX(
+                sonidoDano
+            );
         }
 
         if (movimiento != null)
@@ -87,12 +113,15 @@ public class PlayerVida : MonoBehaviour, IDamageable
 
         if (coroutineInvulnerabilidad != null)
         {
-            StopCoroutine(coroutineInvulnerabilidad);
+            StopCoroutine(
+                coroutineInvulnerabilidad
+            );
         }
 
-        coroutineInvulnerabilidad = StartCoroutine(
-            ActivarInvulnerabilidad()
-        );
+        coroutineInvulnerabilidad =
+            StartCoroutine(
+                ActivarInvulnerabilidad()
+            );
     }
 
     private IEnumerator ActivarInvulnerabilidad()
@@ -101,17 +130,23 @@ public class PlayerVida : MonoBehaviour, IDamageable
 
         float tiempoTranscurrido = 0f;
 
-        while (tiempoTranscurrido < duracionInvulnerabilidad)
+        while (tiempoTranscurrido <
+               duracionInvulnerabilidad)
         {
-            spriteRenderer.enabled = !spriteRenderer.enabled;
+            spriteRenderer.enabled =
+                !spriteRenderer.enabled;
 
-            yield return new WaitForSeconds(intervaloParpadeo);
+            yield return new WaitForSeconds(
+                intervaloParpadeo
+            );
 
-            tiempoTranscurrido += intervaloParpadeo;
+            tiempoTranscurrido +=
+                intervaloParpadeo;
         }
 
         spriteRenderer.enabled = true;
         esInvulnerable = false;
+
         coroutineInvulnerabilidad = null;
     }
 
@@ -125,8 +160,12 @@ public class PlayerVida : MonoBehaviour, IDamageable
 
         if (coroutineInvulnerabilidad != null)
         {
-            StopCoroutine(coroutineInvulnerabilidad);
-            coroutineInvulnerabilidad = null;
+            StopCoroutine(
+                coroutineInvulnerabilidad
+            );
+
+            coroutineInvulnerabilidad =
+                null;
         }
 
         spriteRenderer.enabled = true;
@@ -136,8 +175,13 @@ public class PlayerVida : MonoBehaviour, IDamageable
             movimiento.ReproducirMuerte();
         }
 
-        Debug.Log("El jugador se quedó sin vida.");
-        SceneManager.LoadScene("MenuPerder");
+        Debug.Log(
+            "El jugador se quedó sin vida."
+        );
+
+        SceneManager.LoadScene(
+            "MenuPerder"
+        );
     }
 
     private void OnDisable()

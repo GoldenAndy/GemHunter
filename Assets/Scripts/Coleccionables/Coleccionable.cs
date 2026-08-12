@@ -2,17 +2,37 @@ using UnityEngine;
 
 public class Coleccionable : MonoBehaviour
 {
+    [Header("Curación")]
     [SerializeField] private float vidaQueRecupera = 1f;
 
-    private void OnTriggerEnter2D(Collider2D collision)
+    [Header("Sonido")]
+    [SerializeField] private AudioClip sonidoRecoger;
+
+    private void OnTriggerEnter2D(
+        Collider2D collision)
     {
-        if (collision.CompareTag("Player"))
+        if (!collision.CompareTag("Player"))
+            return;
+
+        if (PlayerStats.Instance == null)
+            return;
+
+        if (PlayerStats.Instance.Health <
+            PlayerStats.Instance.MaxHealth)
         {
-            if (PlayerStats.Instance.Health < PlayerStats.Instance.MaxHealth)
+            PlayerStats.Instance.Heal(
+                vidaQueRecupera
+            );
+
+            if (AudioManager.Instance != null &&
+                sonidoRecoger != null)
             {
-                PlayerStats.Instance.Heal(vidaQueRecupera);
-                Destroy(gameObject);
+                AudioManager.Instance.ReproducirSFX(
+                    sonidoRecoger
+                );
             }
+
+            Destroy(gameObject);
         }
     }
 }

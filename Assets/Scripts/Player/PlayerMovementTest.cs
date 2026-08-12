@@ -22,6 +22,10 @@ public class PlayerMovementTest : MonoBehaviour
     [SerializeField] private KeyCode attackKey = KeyCode.Z;
     [SerializeField] private float minimumAttackTime = 0.15f;
 
+    [Header("Sonidos")]
+    [SerializeField] private AudioClip sonidoSalto;
+    [SerializeField] private AudioClip sonidoAtaque;
+
     [Header("Hitbox de espada")]
     [SerializeField] private Transform hitboxPivot;
     [SerializeField] private Collider2D espadaHitboxCollider;
@@ -35,10 +39,6 @@ public class PlayerMovementTest : MonoBehaviour
     [SerializeField] private float normalGravity = 3f;
     [SerializeField] private float fallGravityMultiplier = 1.8f;
     [SerializeField] private float maxFallSpeed = 14f;
-
-    // ============================================================
-    // DETECCIÓN DE SUELO
-    // ============================================================
 
     [Header("Detección de suelo")]
 
@@ -57,38 +57,16 @@ public class PlayerMovementTest : MonoBehaviour
         "a la mitad inferior del collider como suelo.")]
     [SerializeField] private float toleranciaContactoSuelo = 0.03f;
 
-    // ============================================================
-    // COMPONENTES
-    // ============================================================
-
     private Rigidbody2D rb;
     private SpriteRenderer spriteRenderer;
     private Animator animator;
 
     private Vector2 cuerpoColliderOffsetOriginal;
 
-    // ============================================================
-    // CONTACTOS FÍSICOS
-    // ============================================================
-
-    /*
-     * Reutilizamos siempre el mismo array.
-     *
-     * Aquí Unity colocará los puntos donde el collider del jugador
-     * está tocando otros colliders.
-     */
     private readonly ContactPoint2D[] contactosSuelo =
         new ContactPoint2D[16];
 
-    /*
-     * El filtro garantiza que solamente nos interesen contactos
-     * con objetos pertenecientes a Ground Layer.
-     */
     private ContactFilter2D filtroSuelo;
-
-    // ============================================================
-    // ESTADO
-    // ============================================================
 
     private float horizontalInput;
     private bool isRunning;
@@ -109,10 +87,6 @@ public class PlayerMovementTest : MonoBehaviour
     private bool recibiendoDano;
     private bool estaMuerto;
 
-    // ============================================================
-    // AWAKE
-    // ============================================================
-
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -129,12 +103,6 @@ public class PlayerMovementTest : MonoBehaviour
             cuerpoColliderOffsetOriginal =
                 cuerpoCollider.offset;
 
-            /*
-             * El collider corporal NO debe ser Trigger.
-             *
-             * Necesitamos contactos físicos reales para detectar
-             * correctamente el suelo.
-             */
             if (cuerpoCollider.isTrigger)
             {
                 Debug.LogWarning(
@@ -152,10 +120,6 @@ public class PlayerMovementTest : MonoBehaviour
             );
         }
 
-        /*
-         * Configuramos el filtro que utilizaremos para consultar
-         * únicamente contactos con Ground Layer.
-         */
         filtroSuelo = new ContactFilter2D();
         filtroSuelo.SetLayerMask(groundLayer);
         filtroSuelo.useTriggers = false;
@@ -166,10 +130,6 @@ public class PlayerMovementTest : MonoBehaviour
         DesactivarEspadaHitbox();
         ActualizarDireccionHitbox();
     }
-
-    // ============================================================
-    // UPDATE
-    // ============================================================
 
     private void Update()
     {
@@ -191,21 +151,11 @@ public class PlayerMovementTest : MonoBehaviour
             isRunning = false;
         }
 
-        /*
-         * Ya NO usamos GroundCheck.
-         *
-         * Ahora consultamos directamente los contactos físicos
-         * del collider del jugador.
-         */
         DetectarSuelo();
 
         ActualizarTiempoHitbox();
         ActualizarAnimator();
     }
-
-    // ============================================================
-    // FIXED UPDATE
-    // ============================================================
 
     private void FixedUpdate()
     {
@@ -219,10 +169,6 @@ public class PlayerMovementTest : MonoBehaviour
 
         AplicarGravedadMejorada();
     }
-
-    // ============================================================
-    // DAÑO
-    // ============================================================
 
     private void ActualizarBloqueoPorDano()
     {
@@ -240,12 +186,6 @@ public class PlayerMovementTest : MonoBehaviour
             animator.GetNextAnimatorStateInfo(0)
                 .IsName("Player_Hurt");
 
-        /*
-         * El control vuelve únicamente cuando:
-         *
-         * 1. Terminó el tiempo mínimo de bloqueo.
-         * 2. El Animator ya salió de Player_Hurt.
-         */
         if (bloqueoMovimientoPorDano <= 0f &&
             !estaEnHurt &&
             !estaEntrandoEnHurt)
@@ -273,10 +213,6 @@ public class PlayerMovementTest : MonoBehaviour
         horizontalInput = 0f;
         isRunning = false;
 
-        /*
-         * Durante la animación de daño bloqueamos las
-         * transiciones de Any State hacia Jump y Fall.
-         */
         canInterruptAttack = false;
         attackInterruptCounter = 0f;
 
@@ -320,10 +256,6 @@ public class PlayerMovementTest : MonoBehaviour
         );
     }
 
-    // ============================================================
-    // MUERTE
-    // ============================================================
-
     public void ReproducirMuerte()
     {
         if (estaMuerto)
@@ -358,10 +290,6 @@ public class PlayerMovementTest : MonoBehaviour
         );
     }
 
-    // ============================================================
-    // INPUT
-    // ============================================================
-
     private void LeerInput()
     {
         horizontalInput =
@@ -389,28 +317,14 @@ public class PlayerMovementTest : MonoBehaviour
         }
     }
 
-    // ============================================================
-    // DETECCIÓN DE SUELO POR CONTACTO REAL
-    // ============================================================
-
     private void DetectarSuelo()
     {
-        /*
-         * Si por algún motivo no existe el collider,
-         * no podemos detectar suelo.
-         */
         if (cuerpoCollider == null)
         {
             isGrounded = false;
             return;
         }
 
-        /*
-         * Después de saltar ignoramos brevemente los contactos.
-         *
-         * Esto evita que durante los primeros frames del salto
-         * Unity todavía considere el contacto anterior con el suelo.
-         */
         if (groundIgnoreCounter > 0f)
         {
             groundIgnoreCounter -=
@@ -424,12 +338,6 @@ public class PlayerMovementTest : MonoBehaviour
             return;
         }
 
-        /*
-         * Obtenemos los contactos FÍSICOS REALES del collider.
-         *
-         * El filtro ya limita los resultados a objetos
-         * pertenecientes a Ground Layer.
-         */
         int cantidadContactos =
             cuerpoCollider.GetContacts(
                 filtroSuelo,
@@ -438,14 +346,6 @@ public class PlayerMovementTest : MonoBehaviour
 
         bool touchingGround = false;
 
-        /*
-         * Centro del collider en coordenadas del mundo.
-         *
-         * Lo utilizamos para distinguir entre:
-         *
-         * - contacto debajo del personaje = posible suelo
-         * - contacto encima = techo
-         */
         float centroColliderY =
             cuerpoCollider.bounds.center.y;
 
@@ -454,36 +354,15 @@ public class PlayerMovementTest : MonoBehaviour
             ContactPoint2D contacto =
                 contactosSuelo[i];
 
-            /*
-             * El contacto tiene que ocurrir en la mitad inferior
-             * del collider.
-             *
-             * Esto evita considerar el techo como suelo.
-             */
             bool contactoEnParteInferior =
                 contacto.point.y <=
                 centroColliderY +
                 toleranciaContactoSuelo;
 
-            /*
-             * Una pared completamente vertical tendría una normal
-             * prácticamente horizontal:
-             *
-             * normal.y ≈ 0
-             *
-             * Por eso NO la consideramos suelo.
-             *
-             * Un borde o esquina puede producir una normal diagonal,
-             * así que aceptamos valores pequeños de Y.
-             */
             bool tieneComponenteVertical =
                 Mathf.Abs(contacto.normal.y) >=
                 normalMinimaSuelo;
 
-            /*
-             * Además, solo tiene sentido quedar Grounded si
-             * no estamos desplazándonos claramente hacia arriba.
-             */
             bool noEstaSubiendo =
                 rb.velocity.y <= 0.05f;
 
@@ -510,10 +389,6 @@ public class PlayerMovementTest : MonoBehaviour
         }
     }
 
-    // ============================================================
-    // SALTO
-    // ============================================================
-
     private void ControlarSalto()
     {
         if (jumpBufferCounter > 0f &&
@@ -532,6 +407,15 @@ public class PlayerMovementTest : MonoBehaviour
 
             jumpBufferCounter = 0f;
             coyoteTimeCounter = 0f;
+
+            // SONIDO DE SALTO
+            if (AudioManager.Instance != null &&
+                sonidoSalto != null)
+            {
+                AudioManager.Instance.ReproducirSFX(
+                    sonidoSalto
+                );
+            }
         }
 
         if (Input.GetKeyUp(KeyCode.X) &&
@@ -546,10 +430,6 @@ public class PlayerMovementTest : MonoBehaviour
         }
     }
 
-    // ============================================================
-    // ATAQUE
-    // ============================================================
-
     private void ControlarAtaque()
     {
         if (Input.GetKeyDown(attackKey))
@@ -560,6 +440,15 @@ public class PlayerMovementTest : MonoBehaviour
 
             attackInterruptCounter =
                 minimumAttackTime;
+
+            // SONIDO DEL MOVIMIENTO DE ESPADA
+            if (AudioManager.Instance != null &&
+                sonidoAtaque != null)
+            {
+                AudioManager.Instance.ReproducirSFX(
+                    sonidoAtaque
+                );
+            }
         }
 
         if (!canInterruptAttack)
@@ -587,10 +476,6 @@ public class PlayerMovementTest : MonoBehaviour
             DesactivarEspadaHitbox();
         }
     }
-
-    // ============================================================
-    // MOVIMIENTO
-    // ============================================================
 
     private void MoverPersonaje()
     {
@@ -633,10 +518,6 @@ public class PlayerMovementTest : MonoBehaviour
         }
     }
 
-    // ============================================================
-    // GRAVEDAD
-    // ============================================================
-
     private void AplicarGravedadMejorada()
     {
         if (rb.velocity.y < 0f)
@@ -661,10 +542,6 @@ public class PlayerMovementTest : MonoBehaviour
                 );
         }
     }
-
-    // ============================================================
-    // DIRECCIÓN
-    // ============================================================
 
     private void GirarPersonaje()
     {
@@ -692,14 +569,6 @@ public class PlayerMovementTest : MonoBehaviour
                     : new Vector3(-1f, 1f, 1f);
         }
 
-        /*
-         * El collider del cuerpo conserva exactamente
-         * su forma y tamaño originales.
-         *
-         * Únicamente invertimos el Offset X al mirar
-         * hacia la izquierda, tal como hacía el
-         * script original.
-         */
         if (cuerpoCollider != null)
         {
             cuerpoCollider.offset =
@@ -711,10 +580,6 @@ public class PlayerMovementTest : MonoBehaviour
                     );
         }
     }
-
-    // ============================================================
-    // ANIMATOR
-    // ============================================================
 
     private void ActualizarAnimator()
     {
@@ -743,10 +608,6 @@ public class PlayerMovementTest : MonoBehaviour
             canInterruptAttack
         );
     }
-
-    // ============================================================
-    // HITBOX DE ESPADA
-    // ============================================================
 
     public void ActivarEspadaHitbox()
     {

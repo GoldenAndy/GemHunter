@@ -3,7 +3,11 @@ using TMPro;
 
 public class DiamanteColeccionable : MonoBehaviour
 {
+    [Header("UI")]
     [SerializeField] private TMP_Text textoGemas;
+
+    [Header("Sonido")]
+    [SerializeField] private AudioClip sonidoRecoger;
 
     private int gemas = 0;
     private int totalGemas = 3;
@@ -13,22 +17,36 @@ public class DiamanteColeccionable : MonoBehaviour
         ActualizarContador();
     }
 
-    private void OnTriggerEnter2D(Collider2D collision)
+    private void OnTriggerEnter2D(
+        Collider2D collision)
     {
-        if (collision.CompareTag("Player"))
-        {
-            gemas++;
-            ActualizarContador();
+        if (!collision.CompareTag("Player"))
+            return;
 
-            Destroy(gameObject);
+        gemas++;
+
+        ActualizarContador();
+
+        if (AudioManager.Instance != null &&
+            sonidoRecoger != null)
+        {
+            AudioManager.Instance.ReproducirSFX(
+                sonidoRecoger
+            );
         }
+
+        Destroy(gameObject);
     }
 
     private void ActualizarContador()
     {
         if (textoGemas != null)
         {
-            textoGemas.text = "Gemas: " + gemas + "/" + totalGemas;
+            textoGemas.text =
+                "Gemas: " +
+                gemas +
+                "/" +
+                totalGemas;
         }
     }
 }

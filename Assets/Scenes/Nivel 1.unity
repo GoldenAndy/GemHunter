@@ -158,6 +158,14 @@ PrefabInstance:
       propertyPath: capasObjetivo.m_Bits
       value: 1280
       objectReference: {fileID: 0}
+    - target: {fileID: 686988916059258571, guid: 3164222e36b05a84185d813475b82b32, type: 3}
+      propertyPath: sonidoDano
+      value: 
+      objectReference: {fileID: 8300000, guid: d089a7946195dfc40aecd783866cdc0d, type: 3}
+    - target: {fileID: 686988916059258571, guid: 3164222e36b05a84185d813475b82b32, type: 3}
+      propertyPath: sonidoMuerte
+      value: 
+      objectReference: {fileID: 8300000, guid: c159311ce331f854cb779684ef78abe3, type: 3}
     - target: {fileID: 3407382639888621173, guid: 3164222e36b05a84185d813475b82b32, type: 3}
       propertyPath: m_LocalScale.x
       value: 1.3200673
@@ -215,9 +223,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1229351239}
     - target: {fileID: 4094440679805269357, guid: 3164222e36b05a84185d813475b82b32, type: 3}
+      propertyPath: sonidoSalto
+      value: 
+      objectReference: {fileID: 8300000, guid: 413ddd4f2c77d674db4b9e97f3d64365, type: 3}
+    - target: {fileID: 4094440679805269357, guid: 3164222e36b05a84185d813475b82b32, type: 3}
       propertyPath: espadaHitbox
       value: 
       objectReference: {fileID: 1242034423}
+    - target: {fileID: 4094440679805269357, guid: 3164222e36b05a84185d813475b82b32, type: 3}
+      propertyPath: sonidoAtaque
+      value: 
+      objectReference: {fileID: 8300000, guid: e95a20cbfbcb8e745bc8c0c9789dc00e, type: 3}
     - target: {fileID: 4094440679805269357, guid: 3164222e36b05a84185d813475b82b32, type: 3}
       propertyPath: cuerpoCollider
       value: 
@@ -13030,6 +13046,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   vidaQueRecupera: 1
+  sonidoRecoger: {fileID: 8300000, guid: c453173a166d9c640b65f342a6fc0b18, type: 3}
 --- !u!58 &302204235
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -13612,6 +13629,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   vidaQueRecupera: 1
+  sonidoRecoger: {fileID: 8300000, guid: c453173a166d9c640b65f342a6fc0b18, type: 3}
 --- !u!58 &359935861
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -14907,9 +14925,9 @@ MonoBehaviour:
   sfxSource: {fileID: 596424492}
   musicaMenu: {fileID: 8300000, guid: f54854bb31ed55444b95103a63a9fd87, type: 3}
   musicaJuego: {fileID: 8300000, guid: 3c15e75fc9cf5ed48b06713406b00c0e, type: 3}
-  sonidoMover: {fileID: 0}
-  sonidoSeleccionar: {fileID: 0}
-  sonidoVolver: {fileID: 0}
+  sonidoMover: {fileID: 8300000, guid: dec6c886e18a47c4f86d21841671d76b, type: 3}
+  sonidoSeleccionar: {fileID: 8300000, guid: fc4b4ec01d475ab419ed9b22b592abb6, type: 3}
+  sonidoVolver: {fileID: 8300000, guid: 80230404f968f354a8f8c487ac719e23, type: 3}
   duracionFadeMusica: 0.6
   reproducirMusicaMenuAlIniciar: 0
 --- !u!1 &599613972
@@ -16601,6 +16619,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   textoGemas: {fileID: 1993329410}
+  sonidoRecoger: {fileID: 8300000, guid: 318a7f14c875c5a478898aadd8f5e2c9, type: 3}
 --- !u!58 &927874416
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -17958,6 +17977,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   vidaQueRecupera: 1
+  sonidoRecoger: {fileID: 8300000, guid: c453173a166d9c640b65f342a6fc0b18, type: 3}
 --- !u!58 &1189599809
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -18431,7 +18451,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 6.0529785, y: -72}
+  m_AnchoredPosition: {x: 6.0527344, y: -72}
   m_SizeDelta: {x: 19.505838, y: 173.2}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1268786470
@@ -22872,6 +22892,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   textoGemas: {fileID: 1993329410}
+  sonidoRecoger: {fileID: 8300000, guid: 318a7f14c875c5a478898aadd8f5e2c9, type: 3}
 --- !u!58 &1943679260
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -23492,6 +23513,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   textoGemas: {fileID: 1993329410}
+  sonidoRecoger: {fileID: 8300000, guid: 318a7f14c875c5a478898aadd8f5e2c9, type: 3}
 --- !u!58 &1987078913
 CircleCollider2D:
   m_ObjectHideFlags: 0
