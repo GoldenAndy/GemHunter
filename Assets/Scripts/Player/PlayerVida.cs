@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [RequireComponent(typeof(SpriteRenderer))]
 [RequireComponent(typeof(PlayerStats))]
@@ -136,6 +137,7 @@ public class PlayerVida : MonoBehaviour, IDamageable
         }
 
         Debug.Log("El jugador se quedó sin vida.");
+        SceneManager.LoadScene("MenuPerder");
     }
 
     private void OnDisable()
