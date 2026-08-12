@@ -79,11 +79,8 @@ public class AudioManager : MonoBehaviour
     private void Awake()
     {
         /*
-         * Solo puede existir UN AudioManager.
-         *
-         * Como usamos DontDestroyOnLoad, si otra escena
-         * contiene otro AudioManager, destruimos el duplicado.
-         */
+        * Solo puede existir un AudioManager.
+        */
         if (Instance != null &&
             Instance != this)
         {
@@ -92,6 +89,16 @@ public class AudioManager : MonoBehaviour
         }
 
         Instance = this;
+
+        /*
+        * AudioManager está organizado dentro de ---Audio---
+        * en el editor, pero solamente ÉL debe sobrevivir
+        * al cambio de escena.
+        *
+        * Lo sacamos de su padre antes de usar
+        * DontDestroyOnLoad.
+        */
+        transform.SetParent(null);
 
         DontDestroyOnLoad(gameObject);
 

@@ -1295,6 +1295,22 @@ public class AguilaEnemy : MonoBehaviour, IFiltroDanoContacto
         duoIgnorarEvasion =
             false;
 
+        // El jugador puede haber sido destruido mientras
+        // se desactiva una de las águilas o cambia la escena.
+        if (jugador == null)
+        {
+            if (rb != null)
+            {
+                rb.velocity =
+                    Vector2.zero;
+            }
+
+            estadoActual =
+                EstadoAguila.Esperando;
+
+            return;
+        }
+
         estadoActual =
             EstadoAguila.Retirada;
 

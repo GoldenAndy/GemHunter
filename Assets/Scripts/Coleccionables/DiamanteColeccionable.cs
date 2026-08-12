@@ -1,21 +1,14 @@
 using UnityEngine;
-using TMPro;
 
 public class DiamanteColeccionable : MonoBehaviour
 {
-    [Header("UI")]
-    [SerializeField] private TMP_Text textoGemas;
-
     [Header("Sonido")]
     [SerializeField] private AudioClip sonidoRecoger;
 
-    private int gemas = 0;
-    private int totalGemas = 3;
 
-    private void Start()
-    {
-        ActualizarContador();
-    }
+    // =========================================================
+    // RECOGER DIAMANTE
+    // =========================================================
 
     private void OnTriggerEnter2D(
         Collider2D collision)
@@ -23,9 +16,27 @@ public class DiamanteColeccionable : MonoBehaviour
         if (!collision.CompareTag("Player"))
             return;
 
-        gemas++;
 
-        ActualizarContador();
+        // =====================================================
+        // SUMAR GEMA AL CONTADOR GENERAL
+        // =====================================================
+
+        if (ContadorGemas.Instance != null)
+        {
+            ContadorGemas.Instance.SumarGema();
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{name}: No se encontró ContadorGemas en la escena.",
+                this
+            );
+        }
+
+
+        // =====================================================
+        // SONIDO
+        // =====================================================
 
         if (AudioManager.Instance != null &&
             sonidoRecoger != null)
@@ -35,18 +46,11 @@ public class DiamanteColeccionable : MonoBehaviour
             );
         }
 
-        Destroy(gameObject);
-    }
 
-    private void ActualizarContador()
-    {
-        if (textoGemas != null)
-        {
-            textoGemas.text =
-                "Gemas: " +
-                gemas +
-                "/" +
-                totalGemas;
-        }
+        // =====================================================
+        // DESTRUIR DIAMANTE
+        // =====================================================
+
+        Destroy(gameObject);
     }
 }

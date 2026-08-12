@@ -10,6 +10,10 @@ public class PlayerVida : MonoBehaviour, IDamageable
     [SerializeField] private float duracionInvulnerabilidad = 2f;
     [SerializeField] private float intervaloParpadeo = 0.1f;
 
+    [Header("Pantalla de Game Over")]
+    [Tooltip("Tiempo que se espera después de morir antes de mostrar el Game Over.")]
+    [SerializeField] private float tiempoAntesDeGameOver = 2f;
+
     [Header("Reacción al daño")]
     [Tooltip("Tiempo durante el cual el jugador no podrá controlar el movimiento.")]
     [SerializeField] private float duracionBloqueoMovimiento = 0.25f;
@@ -29,27 +33,45 @@ public class PlayerVida : MonoBehaviour, IDamageable
 
     public bool EsInvulnerable => esInvulnerable;
 
+
+    // =========================================================
+    // AWAKE
+    // =========================================================
+
     private void Awake()
     {
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        movimiento = GetComponent<PlayerMovementTest>();
-        playerStats = GetComponent<PlayerStats>();
+        spriteRenderer =
+            GetComponent<SpriteRenderer>();
+
+        movimiento =
+            GetComponent<PlayerMovementTest>();
+
+        playerStats =
+            GetComponent<PlayerStats>();
 
         if (playerStats == null)
         {
-            playerStats = PlayerStats.Instance;
+            playerStats =
+                PlayerStats.Instance;
         }
 
         if (playerStats == null)
         {
             Debug.LogError(
-                "No se encontró PlayerStats. El jugador no podrá recibir daño.",
+                "No se encontró PlayerStats. " +
+                "El jugador no podrá recibir daño.",
                 this
             );
         }
     }
 
-    public void RecibirDano(DamageInfo damageInfo)
+
+    // =========================================================
+    // RECIBIR DAÑO
+    // =========================================================
+
+    public void RecibirDano(
+        DamageInfo damageInfo)
     {
         if (estaMuerto)
             return;
@@ -68,9 +90,13 @@ public class PlayerVida : MonoBehaviour, IDamageable
         );
 
         Debug.Log(
-            $"{gameObject.name} recibió {damageInfo.dano} de daño. " +
-            $"Vida actual: {playerStats.Health}/{playerStats.MaxHealth}"
+            $"{gameObject.name} recibió " +
+            $"{damageInfo.dano} de daño. " +
+            $"Vida actual: " +
+            $"{playerStats.Health}/" +
+            $"{playerStats.MaxHealth}"
         );
+
 
         // =====================================================
         // MUERTE
@@ -87,8 +113,10 @@ public class PlayerVida : MonoBehaviour, IDamageable
             }
 
             Morir();
+
             return;
         }
+
 
         // =====================================================
         // DAÑO NORMAL
@@ -124,11 +152,17 @@ public class PlayerVida : MonoBehaviour, IDamageable
             );
     }
 
+
+    // =========================================================
+    // INVULNERABILIDAD
+    // =========================================================
+
     private IEnumerator ActivarInvulnerabilidad()
     {
         esInvulnerable = true;
 
-        float tiempoTranscurrido = 0f;
+        float tiempoTranscurrido =
+            0f;
 
         while (tiempoTranscurrido <
                duracionInvulnerabilidad)
@@ -144,19 +178,36 @@ public class PlayerVida : MonoBehaviour, IDamageable
                 intervaloParpadeo;
         }
 
-        spriteRenderer.enabled = true;
-        esInvulnerable = false;
+        spriteRenderer.enabled =
+            true;
 
-        coroutineInvulnerabilidad = null;
+        esInvulnerable =
+            false;
+
+        coroutineInvulnerabilidad =
+            null;
     }
+
+
+    // =========================================================
+    // MUERTE
+    // =========================================================
 
     private void Morir()
     {
         if (estaMuerto)
             return;
 
-        estaMuerto = true;
-        esInvulnerable = true;
+        estaMuerto =
+            true;
+
+        esInvulnerable =
+            true;
+
+
+        // =====================================================
+        // DETENER PARPADEO
+        // =====================================================
 
         if (coroutineInvulnerabilidad != null)
         {
@@ -168,7 +219,13 @@ public class PlayerVida : MonoBehaviour, IDamageable
                 null;
         }
 
-        spriteRenderer.enabled = true;
+        spriteRenderer.enabled =
+            true;
+
+
+        // =====================================================
+        // REPRODUCIR ANIMACIÓN DE MUERTE
+        // =====================================================
 
         if (movimiento != null)
         {
@@ -179,16 +236,51 @@ public class PlayerVida : MonoBehaviour, IDamageable
             "El jugador se quedó sin vida."
         );
 
+
+        // =====================================================
+        // ESPERAR ANTES DEL GAME OVER
+        // =====================================================
+
+        StartCoroutine(
+            MostrarGameOver()
+        );
+    }
+
+
+    // =========================================================
+    // MOSTRAR GAME OVER
+    // =========================================================
+
+    private IEnumerator MostrarGameOver()
+    {
+        /*
+         * Esperamos para permitir que la animación
+         * de muerte termine antes de cambiar de escena.
+         *
+         * WaitForSecondsRealtime permite que funcione
+         * incluso si el Time.timeScale llegara a ser 0.
+         */
+
+        yield return new WaitForSecondsRealtime(
+            tiempoAntesDeGameOver
+        );
+
         SceneManager.LoadScene(
             "MenuPerder"
         );
     }
 
+
+    // =========================================================
+    // ON DISABLE
+    // =========================================================
+
     private void OnDisable()
     {
         if (spriteRenderer != null)
         {
-            spriteRenderer.enabled = true;
+            spriteRenderer.enabled =
+                true;
         }
     }
 }

@@ -67,6 +67,7 @@ public class PlayerMovementTest : MonoBehaviour
         new ContactPoint2D[16];
 
     private ContactFilter2D filtroSuelo;
+    private Vector2 velocidadSuelo = Vector2.zero;
 
     private float horizontalInput;
     private bool isRunning;
@@ -86,6 +87,7 @@ public class PlayerMovementTest : MonoBehaviour
     private float bloqueoMovimientoPorDano;
     private bool recibiendoDano;
     private bool estaMuerto;
+    
 
     private void Awake()
     {
@@ -317,13 +319,34 @@ public class PlayerMovementTest : MonoBehaviour
         }
     }
 
+
+
     private void DetectarSuelo()
     {
+        /*
+        * Por defecto asumimos que el suelo está quieto.
+        *
+        * Si encontramos una PlataformaMovil debajo,
+        * reemplazaremos este valor por su velocidad real.
+        */
+        velocidadSuelo =
+            Vector2.zero;
+
+
+        // =========================================================
+        // VALIDAR COLLIDER
+        // =========================================================
+
         if (cuerpoCollider == null)
         {
             isGrounded = false;
             return;
         }
+
+
+        // =========================================================
+        // IGNORAR SUELO JUSTO DESPUÉS DE SALTAR
+        // =========================================================
 
         if (groundIgnoreCounter > 0f)
         {
@@ -332,11 +355,19 @@ public class PlayerMovementTest : MonoBehaviour
 
             isGrounded = false;
 
+            velocidadSuelo =
+                Vector2.zero;
+
             coyoteTimeCounter -=
                 Time.deltaTime;
 
             return;
         }
+
+
+        // =========================================================
+        // OBTENER CONTACTOS
+        // =========================================================
 
         int cantidadContactos =
             cuerpoCollider.GetContacts(
@@ -349,33 +380,144 @@ public class PlayerMovementTest : MonoBehaviour
         float centroColliderY =
             cuerpoCollider.bounds.center.y;
 
+
+        // =========================================================
+        // REVISAR CONTACTOS
+        // =========================================================
+
         for (int i = 0; i < cantidadContactos; i++)
         {
             ContactPoint2D contacto =
                 contactosSuelo[i];
+
+
+            // -----------------------------------------------------
+            // ¿EL CONTACTO ESTÁ DEBAJO DEL JUGADOR?
+            // -----------------------------------------------------
 
             bool contactoEnParteInferior =
                 contacto.point.y <=
                 centroColliderY +
                 toleranciaContactoSuelo;
 
+
+            // -----------------------------------------------------
+            // ¿LA SUPERFICIE TIENE UNA NORMAL ÚTIL COMO SUELO?
+            // -----------------------------------------------------
+
             bool tieneComponenteVertical =
                 Mathf.Abs(contacto.normal.y) >=
                 normalMinimaSuelo;
 
-            bool noEstaSubiendo =
-                rb.velocity.y <= 0.05f;
+
+            // -----------------------------------------------------
+            // IDENTIFICAR EL COLLIDER DEL SUELO
+            // -----------------------------------------------------
+
+            Collider2D colliderSuelo;
+
+            if (contacto.collider == cuerpoCollider)
+            {
+                colliderSuelo =
+                    contacto.otherCollider;
+            }
+            else
+            {
+                colliderSuelo =
+                    contacto.collider;
+            }
+
+
+            // -----------------------------------------------------
+            // BUSCAR SI ESE SUELO ES UNA PLATAFORMA MÓVIL
+            // -----------------------------------------------------
+
+            PlataformaMovil plataforma =
+                null;
+
+            if (colliderSuelo != null)
+            {
+                plataforma =
+                    colliderSuelo
+                        .GetComponentInParent<PlataformaMovil>();
+            }
+
+
+            // -----------------------------------------------------
+            // VELOCIDAD DE LA SUPERFICIE
+            // -----------------------------------------------------
+
+            Vector2 velocidadSuperficie =
+                plataforma != null
+                    ? plataforma.VelocidadActual
+                    : Vector2.zero;
+
+
+            /*
+            * Ya no preguntamos simplemente:
+            *
+            *     rb.velocity.y <= 0
+            *
+            * porque eso falla cuando todo el suelo
+            * está moviéndose.
+            *
+            * Ahora calculamos cuánto se mueve el jugador
+            * RESPECTO A la superficie.
+            */
+            float velocidadVerticalRelativa =
+                rb.velocity.y -
+                velocidadSuperficie.y;
+
+
+            /*
+            * Una pequeña tolerancia evita que pequeñas
+            * diferencias de la simulación física hagan
+            * perder Grounded durante un frame.
+            */
+            bool noSeEstaSeparandoDelSuelo =
+                velocidadVerticalRelativa <= 0.5f;
+
+
+            // -----------------------------------------------------
+            // CONTACTO VÁLIDO CON EL SUELO
+            // -----------------------------------------------------
 
             if (contactoEnParteInferior &&
                 tieneComponenteVertical &&
-                noEstaSubiendo)
+                noSeEstaSeparandoDelSuelo)
             {
                 touchingGround = true;
+
+                /*
+                * Guardamos la velocidad de la superficie.
+                *
+                * Si es suelo normal será (0, 0).
+                * Si es PlataformaMovil puede ser:
+                *
+                * (2, 0)
+                * (0, 2)
+                * (0, -2)
+                * etc.
+                */
+                velocidadSuelo =
+                    velocidadSuperficie;
+
                 break;
             }
         }
 
-        isGrounded = touchingGround;
+
+        // =========================================================
+        // ACTUALIZAR GROUNDED
+        // =========================================================
+
+        isGrounded =
+            touchingGround;
+
+
+        // =========================================================
+        // COYOTE TIME
+        // =========================================================
 
         if (isGrounded)
         {
@@ -384,6 +526,9 @@ public class PlayerMovementTest : MonoBehaviour
         }
         else
         {
+            velocidadSuelo =
+                Vector2.zero;
+
             coyoteTimeCounter -=
                 Time.deltaTime;
         }
@@ -394,9 +539,15 @@ public class PlayerMovementTest : MonoBehaviour
         if (jumpBufferCounter > 0f &&
             coyoteTimeCounter > 0f)
         {
+            float velocidadBaseVertical =
+                isGrounded
+                    ? velocidadSuelo.y
+                    : 0f;
+
             rb.velocity =
                 new Vector2(
                     rb.velocity.x,
+                    velocidadBaseVertical +
                     jumpForce
                 );
 
@@ -477,6 +628,8 @@ public class PlayerMovementTest : MonoBehaviour
         }
     }
 
+
+
     private void MoverPersonaje()
     {
         float currentSpeed =
@@ -484,35 +637,89 @@ public class PlayerMovementTest : MonoBehaviour
                 ? runSpeed
                 : walkSpeed;
 
+
+        // =========================================================
+        // VELOCIDAD RELATIVA ACTUAL
+        // =========================================================
+
+        /*
+        * Queremos saber cuánto se está moviendo el jugador
+        * RESPECTO AL SUELO.
+        *
+        * Ejemplo:
+        *
+        * Plataforma = +2
+        * Jugador    = +2
+        *
+        * Relativa = 0
+        *
+        * Para el jugador significa que está quieto
+        * sobre la plataforma.
+        */
+        float velocidadRelativaActual =
+            rb.velocity.x -
+            velocidadSuelo.x;
+
+
+        // =========================================================
+        // VELOCIDAD DESEADA RESPECTO AL SUELO
+        // =========================================================
+
         float targetSpeed =
             horizontalInput *
             currentSpeed;
 
+
         float speedDifference =
             targetSpeed -
-            rb.velocity.x;
+            velocidadRelativaActual;
+
+
+        // =========================================================
+        // ACELERACIÓN / DESACELERACIÓN
+        // =========================================================
 
         float movementRate =
             Mathf.Abs(targetSpeed) > 0.01f
                 ? acceleration
                 : deceleration;
 
+
         float movement =
             speedDifference *
             movementRate;
+
 
         rb.AddForce(
             Vector2.right *
             movement
         );
 
-        if (Mathf.Abs(rb.velocity.x) >
+
+        // =========================================================
+        // LIMITAR VELOCIDAD RELATIVA
+        // =========================================================
+
+        /*
+        * IMPORTANTE:
+        *
+        * No limitamos la velocidad mundial del jugador,
+        * sino su velocidad respecto al suelo.
+        */
+        float velocidadRelativaDespues =
+            rb.velocity.x -
+            velocidadSuelo.x;
+
+
+        if (Mathf.Abs(velocidadRelativaDespues) >
             currentSpeed)
         {
             rb.velocity =
                 new Vector2(
-                    Mathf.Sign(rb.velocity.x) *
+                    velocidadSuelo.x +
+                    Mathf.Sign(velocidadRelativaDespues) *
                     currentSpeed,
+
                     rb.velocity.y
                 );
         }
@@ -520,7 +727,15 @@ public class PlayerMovementTest : MonoBehaviour
 
     private void AplicarGravedadMejorada()
     {
-        if (rb.velocity.y < 0f)
+        /*
+        * Solo aplicamos la gravedad reforzada de caída
+        * cuando el jugador REALMENTE está en el aire.
+        *
+        * Si está sobre una plataforma descendente,
+        * sigue estando Grounded.
+        */
+        if (!isGrounded &&
+            rb.velocity.y < 0f)
         {
             rb.gravityScale =
                 normalGravity *
@@ -532,8 +747,13 @@ public class PlayerMovementTest : MonoBehaviour
                 normalGravity;
         }
 
-        if (rb.velocity.y <
-            -maxFallSpeed)
+
+        /*
+        * También limitamos la velocidad máxima de caída
+        * únicamente cuando está en el aire.
+        */
+        if (!isGrounded &&
+            rb.velocity.y < -maxFallSpeed)
         {
             rb.velocity =
                 new Vector2(
@@ -598,9 +818,14 @@ public class PlayerMovementTest : MonoBehaviour
             isGrounded
         );
 
+        float velocidadVerticalAnimacion =
+            isGrounded
+                ? 0f
+                : rb.velocity.y;
+
         animator.SetFloat(
             "VerticalSpeed",
-            rb.velocity.y
+            velocidadVerticalAnimacion
         );
 
         animator.SetBool(
